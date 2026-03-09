@@ -13,7 +13,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // ── CORS ──────────────────────────────────────────────────
 const corsOptions = {
-  origin: 'http://127.0.0.1:5500', // update to match your frontend origin
+  origin: 'https://dailytodo-q6k0.onrender.com',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
