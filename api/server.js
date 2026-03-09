@@ -41,7 +41,7 @@ app.post('/api/signup', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
     const token = uuid.v4();
 
     /* check if users in database */

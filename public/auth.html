@@ -336,7 +336,7 @@
       el.classList.toggle('visible', !!msg);
     }
 
-    function handleSignin(e) {
+    async function handleSignin(e) {
       e.preventDefault();
       const email = document.getElementById('signinEmail').value.trim();
       const password = document.getElementById('signinPassword').value;
@@ -347,7 +347,20 @@
       }
 
       // TODO: wire up to /api/auth/login
-      console.log('Sign in', { email, password });
+
+      const response = await fetch('http://localhost:3000/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (response.ok) {
+        console.log("Signed In")
+      } else {
+        setError('signinError', response.error)
+      }
     }
 
     function handleSignup(e) {
