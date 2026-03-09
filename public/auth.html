@@ -399,13 +399,12 @@
       });
 
       if (response.ok) {
-        setError('signupError', "Please Proceed to Login")
-        document.getElementById('signupName').value = "";
-        document.getElementById('signupEmail').value = "";
-        document.getElementById('signupPassword').value = "";
-        document.getElementById('signupConfirm').value = "";
+        const data = await response.json();
+        localStorage.setItem('token', data.data.token);
+        window.location.href = './index.html';
       } else {
-        setError('signupError', response.error)
+        const data = await response.json();
+        setError('signupError', data.error || 'Sign up failed.');
       }
     }
   </script>
