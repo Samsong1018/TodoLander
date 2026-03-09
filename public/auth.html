@@ -348,7 +348,7 @@
 
       // TODO: wire up to /api/auth/login
 
-      const response = await fetch('http://localhost:3000/login', {
+      const response = await fetch('http://localhost:3000/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -358,12 +358,13 @@
 
       if (response.ok) {
         console.log("Signed In")
+        window.location = "./index.html"
       } else {
         setError('signinError', response.error)
       }
     }
 
-    function handleSignup(e) {
+    async function handleSignup(e) {
       e.preventDefault();
       const name = document.getElementById('signupName').value.trim();
       const email = document.getElementById('signupEmail').value.trim();
@@ -386,7 +387,20 @@
       }
 
       // TODO: wire up to /api/auth/signup
-      console.log('Sign up', { name, email, password });
+      const response = await fetch('http://localhost:3000/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password, name })
+      });
+
+      if (response.ok) {
+        console.log("Please proceed to Login")
+        setError('signupError', "Successfully Signed Up")
+      } else {
+        setError('signupError', response.error)
+      }
     }
   </script>
 </body>
