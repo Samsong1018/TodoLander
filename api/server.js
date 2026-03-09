@@ -27,7 +27,7 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const rows = await sql`
-      SELECT sessions.*, users.email, users.name, users.user_data
+      SELECT sessions.*, users.email, users.full_name, users.cal_data
       FROM sessions
       JOIN users ON sessions.user_id = users.id
       WHERE sessions.token = ${token}
@@ -53,6 +53,49 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+/* Get User Data */
+
+app.get('/api/user', (req, res) => {
+    authenticateToken(req, res, () => {
+        res.status(200).json(req.user.cal_data)
+    });
+});
+
+/* Save User Data */
+
+app.put('/api/user', (req, res) => {
+    authenticateToken(req, res, async () => {
+        const { todos, recurring, recurringState } = req.body;
+
+        try {
+            await sql`
+                UPDATE users
+                SET cal_data = ${sql.json({ todos, recurring, recurringState })}
+                WHERE id = ${req.user.user_id}
+            `;
+            res.status(200).json({ message: 'success' });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Server Error' });
+        }
+    });
+});
+
+/* Logout */
+
+app.post('/api/logout', (req, res) => {
+    authenticateToken(req, res, async () => {
+        const token = req.headers['authorization']?.split(' ')[1];
+        try {
+            await sql`DELETE FROM sessions WHERE token = ${token}`;
+            res.status(200).json({ message: 'success' });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'Server Error' });
+        }
+    });
+});
+
 /* Singup and Login endpoints */
 
 app.post('/api/signup', async (req, res) => {
@@ -71,7 +114,7 @@ app.post('/api/signup', async (req, res) => {
         const [user] = await sql`
             INSERT INTO users (email, password, full_name)
             VALUES (${email}, ${hash}, ${name})
-            RETURNING id, email, full_name, created_at, token_data, user_data
+            RETURNING id, email, full_name, created_at, cal_data
         `;
 
         res.status(201).json({message: "success"});
@@ -99,11 +142,20 @@ app.post('/api/login', async (req, res) => {
         const user = users[0];
         const match = await bcrypt.compare(password, user.password);
 
-        console.log(user)
-
         if (!match) {
             return res.status(401).json({error: "Invalid email or password"});
         };
+
+        const existing = await sql`
+            SELECT token, expires_at FROM sessions
+            WHERE user_id = ${user.id} AND expires_at > NOW()
+            ORDER BY expires_at DESC
+            LIMIT 1
+        `;
+
+        if (existing.length > 0) {
+            return res.status(200).json({ message: "success", data: { token: existing[0].token, expires_at: existing[0].expires_at } });
+        }
 
         await sql`
             INSERT INTO sessions (user_id, token, expires_at)

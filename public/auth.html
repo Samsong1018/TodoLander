@@ -358,10 +358,12 @@
       });
 
       if (response.ok) {
-        console.log("Signed In")
-        window.location = "./index.html"
+        const data = await response.json();
+        localStorage.setItem('token', data.data.token);
+        window.location.href = './index.html';
       } else {
-        setError('signinError', response.error)
+        const data = await response.json();
+        setError('signinError', data.error || 'Sign in failed.');
       }
     }
 
@@ -398,6 +400,10 @@
 
       if (response.ok) {
         setError('signupError', "Please Proceed to Login")
+        document.getElementById('signupName').value = "";
+        document.getElementById('signupEmail').value = "";
+        document.getElementById('signupPassword').value = "";
+        document.getElementById('signupConfirm').value = "";
       } else {
         setError('signupError', response.error)
       }
