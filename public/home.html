@@ -623,7 +623,7 @@
 
     async function loadFromBackend() {
       const token = getToken();
-      if (!token) { window.location.href = '/public/auth.html'; return; }
+      if (!token) { window.location.href = './'; return; }
 
       const res = await fetch(`${API_BASE}/api/user`, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -631,7 +631,7 @@
 
       if (res.status === 401) {
         localStorage.removeItem(TOKEN_KEY);
-        window.location.href = '/public/auth.html';
+        window.location.href = './';
         return;
       }
 
@@ -1160,7 +1160,7 @@
         }).catch(() => {});
       }
       localStorage.removeItem(TOKEN_KEY);
-      window.location.href = './auth.html';
+      window.location.href = './';
     });
 
     document.getElementById('importBtn').addEventListener('click', () => {
