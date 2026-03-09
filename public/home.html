@@ -546,6 +546,10 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       Import JSON
     </button>
+    <button class="btn btn-outline btn-sm" id="logoutBtn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign Out
+    </button>
   </div>
   <div class="toast" id="toast"></div>
   <div class="app">
@@ -601,39 +605,65 @@
 
   <script>
     // ── State ──────────────────────────────────────────────
-    const STORAGE_KEY        = 'schedule_todos';
-    const RECURRING_KEY      = 'schedule_recurring';
-    const RECURRING_STATE_KEY = 'schedule_recurring_state';
+    const API_BASE = 'http://localhost:3000';
+    const TOKEN_KEY = 'token';
 
     let state = {
       year: new Date().getFullYear(),
       month: new Date().getMonth(),
       selectedDate: null,
-      todos: loadTodos(),
-      recurring: loadRecurring(),       // [{ id, text, frequency, startDate }]
-      recurringState: loadRecurringState(), // { 'YYYY-MM-DD': { [id]: { done, dismissed } } }
+      todos: {},
+      recurring: [],
+      recurringState: {},
     };
 
-    function loadTodos() {
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
-      catch { return {}; }
-    }
-    function loadRecurring() {
-      try { return JSON.parse(localStorage.getItem(RECURRING_KEY)) || []; }
-      catch { return []; }
-    }
-    function loadRecurringState() {
-      try { return JSON.parse(localStorage.getItem(RECURRING_STATE_KEY)) || {}; }
-      catch { return {}; }
+    function getToken() {
+      return localStorage.getItem(TOKEN_KEY);
     }
 
-    function saveTodos() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.todos));
+    async function loadFromBackend() {
+      const token = getToken();
+      if (!token) { window.location.href = '/public/auth.html'; return; }
+
+      const res = await fetch(`${API_BASE}/api/user`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (res.status === 401) {
+        localStorage.removeItem(TOKEN_KEY);
+        window.location.href = '/public/auth.html';
+        return;
+      }
+
+      const calData = await res.json();
+      state.todos         = calData?.todos         || {};
+      state.recurring     = calData?.recurring     || [];
+      state.recurringState = calData?.recurringState || {};
     }
-    function saveRecurring() {
-      localStorage.setItem(RECURRING_KEY, JSON.stringify(state.recurring));
-      localStorage.setItem(RECURRING_STATE_KEY, JSON.stringify(state.recurringState));
+
+    async function saveToBackend() {
+      const token = getToken();
+      if (!token) return;
+      try {
+        await fetch(`${API_BASE}/api/user`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            todos: state.todos,
+            recurring: state.recurring,
+            recurringState: state.recurringState,
+          }),
+        });
+      } catch (err) {
+        console.error('Failed to save:', err);
+      }
     }
+
+    function saveTodos() { saveToBackend(); }
+    function saveRecurring() { saveToBackend(); }
 
     function dateKey(y, m, d) {
       return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -1121,6 +1151,18 @@
       showToast(msg, imported > 0 ? 'success' : 'error');
     }
 
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      const token = getToken();
+      if (token) {
+        await fetch(`${API_BASE}/api/logout`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+        }).catch(() => {});
+      }
+      localStorage.removeItem(TOKEN_KEY);
+      window.location.href = './auth.html';
+    });
+
     document.getElementById('importBtn').addEventListener('click', () => {
       document.getElementById('importFileInput').value = '';
       document.getElementById('importFileInput').click();
@@ -1142,8 +1184,13 @@
     });
 
     // ── Init ───────────────────────────────────────────────
-    renderCalendar();
-    renderTodos();
+    async function init() {
+      await loadFromBackend();
+      renderCalendar();
+      renderTodos();
+    }
+
+    init();
   </script>
 </body>
 </html>
