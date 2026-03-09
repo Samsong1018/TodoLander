@@ -17,6 +17,7 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "express-rate-limit": "^8.3.1",
+    "path": "^0.12.7",
     "postgres": "^3.4.8",
     "uuid": "^13.0.0"
   },
