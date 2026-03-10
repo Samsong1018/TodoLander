@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign In — Schedule</title>
+  <title>Sign In — TodoLander</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,6 +26,18 @@
       --radius-sm: 8px;
     }
 
+    body.light {
+      --bg: #f5f6fa;
+      --surface: #ffffff;
+      --surface2: #eef0f8;
+      --border: #dde0f0;
+      --text: #1a1d27;
+      --text-muted: #6b7280;
+      --text-dim: #4b5563;
+      --accent-dim: rgba(108, 99, 255, 0.1);
+      --danger-dim: rgba(239, 68, 68, 0.1);
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: var(--bg);
@@ -39,20 +51,28 @@
     }
 
     .brand {
-      font-size: 1.5rem;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
       margin-bottom: 32px;
     }
+    .logo-text {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 700;
+      letter-spacing: -1px;
+      color: var(--text);
+    }
+    .logo-accent { color: var(--accent); }
 
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 32px;
-      width: 100%;
-      max-width: 400px;
+      width: clamp(300px, 90vw, 420px);
+      /* fixed height so switching tabs never resizes the card */
+      min-height: 420px;
+      position: relative;
     }
 
     /* Tab switcher */
@@ -89,9 +109,27 @@
       color: var(--text-dim);
     }
 
-    /* Forms */
-    .form { display: none; flex-direction: column; gap: 16px; }
-    .form.active { display: flex; }
+    /* Forms — both occupy the same space so the card never resizes */
+    .forms-container {
+      position: relative;
+    }
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      opacity: 0;
+      pointer-events: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      transition: opacity 0.15s;
+    }
+    .form.active {
+      opacity: 1;
+      pointer-events: all;
+      position: relative;
+    }
 
     .field { display: flex; flex-direction: column; gap: 6px; }
 
@@ -211,7 +249,13 @@
 </head>
 <body>
 
-  <div class="brand">Schedule</div>
+  <div class="brand">
+    <svg width="86" height="86" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="30" height="30" rx="8" fill="#6c63ff"/>
+      <polyline points="8,15 12,20 22,10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    <span class="logo-text"><span class="logo-accent">Todo</span>Lander</span>
+  </div>
 
   <div class="card">
     <div class="tabs" role="tablist">
@@ -219,6 +263,7 @@
       <button class="tab" id="signupTab" role="tab" aria-selected="false" onclick="switchTab('signup')">Sign Up</button>
     </div>
 
+    <div class="forms-container">
     <!-- Sign In -->
     <form class="form active" id="signinForm" novalidate onsubmit="handleSignin(event)">
       <div class="error-msg" id="signinError"></div>
@@ -290,6 +335,7 @@
 
       <button type="submit" class="submit-btn">Create Account</button>
     </form>
+    </div><!-- end forms-container -->
   </div>
 
   <p class="footer-text">
@@ -298,6 +344,9 @@
   </p>
 
   <script>
+    // Apply saved theme on load
+    if (localStorage.getItem('theme') === 'light') document.body.classList.add('light');
+
     const EYE_OPEN = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
     const EYE_CLOSED = `<line x1="17.94" y1="17.94" x2="22" y2="22"/><line x1="1" y1="1" x2="5.18" y2="5.18"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M6.18 6.18A18.5 18.5 0 0 0 1 12s4 8 11 8c2.21 0 4.25-.72 5.9-1.95"/><line x1="1" y1="1" x2="22" y2="22"/>`;
     const TOKEN_KEY = 'token';
