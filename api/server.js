@@ -216,4 +216,16 @@ async function purgeExpiredSessions() {
 purgeExpiredSessions();
 setInterval(purgeExpiredSessions, 60 * 60 * 1000); // every hour
 
+// Keept the server alive
+
+setInterval(() => {
+  fetch('https://dailytodo-api.onrender.com/health')
+    .catch(() => {}); // silently ignore errors
+}, 14 * 60 * 1000);
+
+// Add a lightweight health endpoint to ping
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
 app.listen(PORT, () => console.log(`Listening on port: ${PORT}`));
