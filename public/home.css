@@ -537,6 +537,7 @@ h1 {
   position: relative;
 }
 .todo-item:hover { border-color: #3e4260; }
+body.compact .todo-item { padding: 6px 10px; gap: 8px; }
 
 /* ── Color bar ── */
 .todo-color-bar {

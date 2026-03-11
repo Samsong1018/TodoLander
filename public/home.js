@@ -128,8 +128,15 @@ function renderCalendar() {
   grid.innerHTML = '';
 
   const today = new Date();
-  const firstDay = new Date(year, month, 1).getDay();
+  const weekStart = localStorage.getItem('weekStart') === 'mon' ? 1 : 0;
+  const rawFirst = new Date(year, month, 1).getDay();
+  const firstDay = (rawFirst - weekStart + 7) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const weekdayLabels = weekStart === 1
+    ? ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+    : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  document.querySelectorAll('.cal-weekdays span').forEach((el, i) => { el.textContent = weekdayLabels[i]; });
 
   for (let i = 0; i < firstDay; i++) {
     const el = document.createElement('div');
@@ -211,11 +218,20 @@ function renderTodos() {
   const list       = document.getElementById('todoList');
   list.innerHTML   = '';
 
+  const showCompleted = localStorage.getItem('showCompleted') !== 'false';
   if (todos.length === 0 && applicable.length === 0) {
     list.innerHTML = '<div class="empty-list">No tasks yet. Add one above.</div>';
   } else {
-    todos.forEach((todo, idx) => list.appendChild(makeTodoEl(todo, idx)));
-    applicable.forEach(task => list.appendChild(makeRecurringEl(task, selectedDate)));
+    todos.forEach((todo, idx) => {
+      if (showCompleted || !todo.done) list.appendChild(makeTodoEl(todo, idx));
+    });
+    applicable.forEach(task => {
+      const isDone = (state.recurringState[selectedDate] || {})[task.id]?.done;
+      if (showCompleted || !isDone) list.appendChild(makeRecurringEl(task, selectedDate));
+    });
+    if (list.children.length === 0) {
+      list.innerHTML = '<div class="empty-list">All tasks complete.</div>';
+    }
   }
 
   const recurDone = applicable.filter(t => (state.recurringState[selectedDate] || {})[t.id]?.done).length;
@@ -908,6 +924,31 @@ applyTheme(localStorage.getItem('theme') === 'light');
 
 document.getElementById('themeToggle').addEventListener('change', e => {
   applyTheme(e.target.checked);
+});
+
+// ── Week start ──────────────────────────────────────────
+document.getElementById('weekStartToggle').checked = localStorage.getItem('weekStart') === 'mon';
+document.getElementById('weekStartToggle').addEventListener('change', e => {
+  localStorage.setItem('weekStart', e.target.checked ? 'mon' : 'sun');
+  renderCalendar();
+});
+
+// ── Show completed ──────────────────────────────────────
+document.getElementById('showCompletedToggle').checked = localStorage.getItem('showCompleted') !== 'false';
+document.getElementById('showCompletedToggle').addEventListener('change', e => {
+  localStorage.setItem('showCompleted', e.target.checked ? 'true' : 'false');
+  renderTodos();
+});
+
+// ── Compact view ────────────────────────────────────────
+function applyCompact(compact) {
+  document.body.classList.toggle('compact', compact);
+  document.getElementById('compactToggle').checked = compact;
+  localStorage.setItem('compactView', compact ? 'true' : 'false');
+}
+applyCompact(localStorage.getItem('compactView') === 'true');
+document.getElementById('compactToggle').addEventListener('change', e => {
+  applyCompact(e.target.checked);
 });
 
 // ── Settings panel ─────────────────────────────────────
