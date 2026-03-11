@@ -16,7 +16,7 @@ function getToken() {
 }
 
 async function loadFromBackend() {
-  /*
+  
   const token = getToken();
   if (!token) { window.location.href = './'; return; }
 
@@ -29,7 +29,7 @@ async function loadFromBackend() {
     window.location.href = './';
     return;
   }
-  */
+  
   const calData = await res.json();
   state.todos          = calData?.todos          || {};
   state.recurring      = calData?.recurring      || [];
