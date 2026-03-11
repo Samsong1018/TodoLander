@@ -819,6 +819,44 @@ h1 {
   width: 180px;
 }
 @media (max-width: 500px) { .search-input { width: 100px; } }
+@media (max-width: 600px) {
+  body {
+    padding: 16px 12px;
+  }
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .search-wrap {
+    width: 100%;
+    margin-right: 0;
+  }
+  .search-input {
+    width: 100%;
+  }
+  .btn-label {
+    display: none;
+  }
+  .app {
+    grid-template-columns: 1fr;
+  }
+  /* Prevent grid items from overflowing their column */
+  .calendar-card,
+  .todo-panel {
+    min-width: 0;
+    padding: 14px;
+  }
+  /* Stack add-form vertically so select + button don't cause overflow */
+  .add-form {
+    flex-wrap: wrap;
+  }
+  .add-form input {
+    width: 100%;
+  }
+  .settings-panel {
+    width: 100%;
+  }
+}
 .search-input::placeholder { color: var(--text-muted); }
 .search-results {
   position: absolute;
