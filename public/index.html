@@ -338,10 +338,6 @@
     </div><!-- end forms-container -->
   </div>
 
-  <p class="footer-text">
-    <span id="footerText">Don't have an account?</span>
-    <a href="#" id="footerLink" onclick="switchTab('signup'); return false;">Sign up</a>
-  </p>
 
   <script>
     // Apply saved theme on load
@@ -370,10 +366,6 @@
 
       document.getElementById('signinForm').classList.toggle('active', isSignin);
       document.getElementById('signupForm').classList.toggle('active', !isSignin);
-
-      document.getElementById('footerText').textContent = isSignin ? "Don't have an account?" : 'Already have an account?';
-      document.getElementById('footerLink').textContent = isSignin ? 'Sign up' : 'Sign in';
-      document.getElementById('footerLink').onclick = () => { switchTab(isSignin ? 'signup' : 'signin'); return false; };
 
       // Clear errors when switching
       setError('signinError', '');
