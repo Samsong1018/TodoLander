@@ -5,10 +5,14 @@ const sql = require('./db');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const path = require('path')
+const helmet = require('helmet');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(helmet());
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '../public')));
 
 // ── CORS ──────────────────────────────────────────────────
@@ -16,6 +20,7 @@ const corsOptions = {
   origin: ['https://todolander.com', 'https://www.todolander.com', 'https://dailytodo-q6k0.onrender.com'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
@@ -27,7 +32,7 @@ app.use(express.json({ limit: '1mb' }));
 // ── Rate limiting (fix #4) ────────────────────────────────
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20,
+  max: 5,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
@@ -40,8 +45,14 @@ app.use('/api/signup', authLimiter);
 // Fix #1: expiry check moved into SQL, token refreshed on each request (fix #9)
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+// Cookie options — SameSite=None+Secure required for cross-origin cookies in production
+const isProd = process.env.NODE_ENV === 'production';
+const COOKIE_BASE = { httpOnly: true, secure: isProd, sameSite: isProd ? 'None' : 'Lax' };
+const COOKIE_OPTS = { ...COOKIE_BASE, maxAge: SESSION_DURATION_MS };
+
 const authenticateToken = async (req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
+  // Accept httpOnly cookie first (preferred), fall back to Authorization header for existing sessions
+  const token = req.cookies?.session || req.headers['authorization']?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'No token provided' });
 
   try {
@@ -71,10 +82,16 @@ const authenticateToken = async (req, res, next) => {
 };
 
 // ── Input validation helper (fix #5) ─────────────────────
+const FIELD_MAX_LENGTHS = { email: 255, password: 128, name: 100 };
+
 function validateFields(fields) {
   for (const [name, value] of Object.entries(fields)) {
     if (!value || typeof value !== 'string' || value.trim() === '') {
       return `${name} is required.`;
+    }
+    const max = FIELD_MAX_LENGTHS[name];
+    if (max && value.length > max) {
+      return `${name} must be ${max} characters or fewer.`;
     }
   }
   return null;
@@ -110,9 +127,10 @@ app.put('/api/user', (req, res) => {
 // ── Logout ────────────────────────────────────────────────
 app.post('/api/logout', (req, res) => {
   authenticateToken(req, res, async () => {
-    const token = req.headers['authorization']?.split(' ')[1];
+    const token = req.cookies?.session || req.headers['authorization']?.split(' ')[1];
     try {
       await sql`DELETE FROM sessions WHERE token = ${token}`;
+      res.clearCookie('session', COOKIE_BASE);
       res.status(200).json({ message: 'success' });
     } catch (err) {
       console.error(err);
@@ -149,6 +167,7 @@ app.post('/api/signup', async (req, res) => {
       VALUES (${user.id}, ${token}, ${expires_at})
     `;
 
+    res.cookie('session', token, COOKIE_OPTS);
     res.status(201).json({ message: 'success', data: { token, expires_at } });
   } catch (err) {
     console.error(err);
@@ -185,6 +204,7 @@ app.post('/api/login', async (req, res) => {
     `;
 
     if (existing.length > 0) {
+      res.cookie('session', existing[0].token, COOKIE_OPTS);
       return res.status(200).json({ message: 'success', data: { token: existing[0].token, expires_at: existing[0].expires_at } });
     }
 
@@ -196,6 +216,7 @@ app.post('/api/login', async (req, res) => {
       VALUES (${user.id}, ${token}, ${expires_at})
     `;
 
+    res.cookie('session', token, COOKIE_OPTS);
     res.status(201).json({ message: 'success', data: { token, expires_at } });
   } catch (err) {
     console.error(err);

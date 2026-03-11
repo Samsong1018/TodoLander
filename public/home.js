@@ -21,6 +21,7 @@ async function loadFromBackend() {
   if (!token) { window.location.href = './'; return; }
 
   const res = await fetch(`${API_BASE}/api/user`, {
+    credentials: 'include',
     headers: { 'Authorization': `Bearer ${token}` },
   });
 
@@ -42,6 +43,7 @@ async function saveToBackend() {
   try {
     await fetch(`${API_BASE}/api/user`, {
       method: 'PUT',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
@@ -384,6 +386,7 @@ function startEdit(idx, item, textEl) {
   const input = document.createElement('input');
   input.className = 'todo-edit-input';
   input.value = todos[idx].text;
+  input.maxLength = 500;
 
   item.replaceChild(input, textEl);
   input.focus();
@@ -605,6 +608,7 @@ function startEditRecurring(id, item, textEl) {
   const input = document.createElement('input');
   input.className = 'todo-edit-input';
   input.value = task.text;
+  input.maxLength = 500;
   item.replaceChild(input, textEl);
   input.focus();
   input.select();
@@ -714,7 +718,8 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   if (token) {
     await fetch(`${API_BASE}/api/logout`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
+      credentials: 'include',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     }).catch(() => {});
   }
   localStorage.removeItem(TOKEN_KEY);
