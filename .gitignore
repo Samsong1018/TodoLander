@@ -3,3 +3,4 @@
 .env
 MyNotes.txt
 .DS_Store
+.gitignore
