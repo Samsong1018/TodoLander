@@ -35,8 +35,9 @@ self.addEventListener('notificationclick', event => {
           return client.focus();
         }
       }
-      // Otherwise open a new tab
-      return clients.openWindow(url);
+      // Otherwise open a new tab — must be absolute URL
+      const absolute = url.startsWith('http') ? url : self.location.origin + url;
+      return clients.openWindow(absolute);
     })
   );
 });

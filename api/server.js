@@ -10,11 +10,16 @@ const cookieParser = require('cookie-parser');
 const webpush = require('web-push');
 
 // ── Web Push (VAPID) setup ────────────────────────────
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL,
-  process.env.VAPID_PUBLIC_KEY,
-  process.env.VAPID_PRIVATE_KEY
-);
+const vapidConfigured = !!(process.env.VAPID_EMAIL && process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
+if (vapidConfigured) {
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL,
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+} else {
+  console.warn('VAPID env vars not set — push notifications disabled.');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -235,13 +240,16 @@ app.post('/api/login', async (req, res) => {
 // ── Push notification helpers ─────────────────────────
 // Replicates the frontend doesRecurOn logic for server-side task counting
 function doesRecurOn(task, dateStr) {
-  const [ty, tm, td] = task.startDate.split('-').map(Number);
+  // Support both camelCase (current) and snake_case (legacy) field names
+  const startStr = task.startDate || task.start_date;
+  if (!startStr) return false;
+  const [ty, tm, td] = startStr.split('-').map(Number);
   const [dy, dm, dd] = dateStr.split('-').map(Number);
-  const start = new Date(ty, tm - 1, td);
-  const date  = new Date(dy, dm - 1, dd);
-  if (date < start) return false;
+  const startDate = new Date(ty, tm - 1, td);
+  const date      = new Date(dy, dm - 1, dd);
+  if (date < startDate) return false;
   if (task.frequency === 'daily')   return true;
-  if (task.frequency === 'weekly')  return start.getDay() === date.getDay();
+  if (task.frequency === 'weekly')  return startDate.getDay() === date.getDay();
   if (task.frequency === 'monthly') return td === dd;
   return false;
 }
@@ -266,15 +274,17 @@ function countOverdueTasks(calData, todayStr) {
   }
   // overdue recurring: dates before today with undismissed, undone instances
   for (const task of (calData?.recurring || [])) {
-    const [ty, tm, td] = task.startDate.split('-').map(Number);
-    const start = new Date(ty, tm - 1, td);
+    const startStr = task.startDate || task.start_date;
+    if (!startStr) continue;
+    const [ty, tm, td] = startStr.split('-').map(Number);
+    const taskStart = new Date(ty, tm - 1, td);
     const [dy, dm, dd] = todayStr.split('-').map(Number);
     const today = new Date(dy, dm - 1, dd);
     // Only look at dates up to 30 days back to avoid excessive iteration
     for (let i = 1; i <= 30; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      if (d < start) break;
+      if (d < taskStart) break;
       const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       if (!doesRecurOn(task, key)) continue;
       const ds = calData?.recurringState?.[key] || {};
@@ -343,8 +353,13 @@ app.delete('/api/push/subscribe', (req, res) => {
 // Get and update notification preferences
 app.get('/api/push/prefs', (req, res) => {
   authenticateToken(req, res, async () => {
-    const rows = await sql`SELECT notification_prefs FROM users WHERE id = ${req.user.user_id}`;
-    res.json(rows[0]?.notification_prefs || {});
+    try {
+      const rows = await sql`SELECT notification_prefs FROM users WHERE id = ${req.user.user_id}`;
+      res.json(rows[0]?.notification_prefs || {});
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Server error' });
+    }
   });
 });
 
@@ -362,16 +377,33 @@ app.put('/api/push/prefs', (req, res) => {
 });
 
 // ── Notification scheduler ────────────────────────────
+// Returns the current time and today's date in the given IANA timezone
+function getLocalTimeAndDate(timezone) {
+  const now = new Date();
+  const tz = timezone || 'UTC';
+  try {
+    const timeStr = now.toLocaleString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+    const dateStr = now.toLocaleDateString('en-CA', { timeZone: tz }); // en-CA = YYYY-MM-DD
+    const [hh, mm] = timeStr.split(':').map(Number);
+    return { hh, mm, dateStr };
+  } catch {
+    // Invalid timezone — fall back to UTC
+    const timeStr = now.toLocaleString('en-US', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', hour12: false });
+    const dateStr = now.toISOString().slice(0, 10);
+    const [hh, mm] = timeStr.split(':').map(Number);
+    return { hh, mm, dateStr };
+  }
+}
+
 // Notification type handlers — add new types here for future expansion
 const NOTIFICATION_TYPES = {
-  morning_digest: async (_userId, calData, prefs, subscription, todayStr) => {
+  morning_digest: async (_userId, calData, prefs, subscription) => {
     const p = prefs.morning_digest;
     if (!p?.enabled) return;
-    const nowInTz = new Date().toLocaleString('en-US', { timeZone: subscription.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
-    const [hh, mm] = nowInTz.split(':').map(Number);
+    const { hh, mm, dateStr } = getLocalTimeAndDate(subscription.timezone);
     const [ph, pm] = (p.time || '08:00').split(':').map(Number);
     if (hh !== ph || mm < pm || mm >= pm + 15) return; // only fire in the right 15-min window
-    const count = countTasksForDate(calData, todayStr);
+    const count = countTasksForDate(calData, dateStr);
     if (count === 0) return;
     await sendPushToUser(subscription.subscription, {
       type: 'morning_digest',
@@ -381,14 +413,13 @@ const NOTIFICATION_TYPES = {
     });
   },
 
-  overdue_alert: async (_userId, calData, prefs, subscription, todayStr) => {
+  overdue_alert: async (_userId, calData, prefs, subscription) => {
     const p = prefs.overdue_alert;
     if (!p?.enabled) return;
-    const nowInTz = new Date().toLocaleString('en-US', { timeZone: subscription.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
-    const [hh, mm] = nowInTz.split(':').map(Number);
+    const { hh, mm, dateStr } = getLocalTimeAndDate(subscription.timezone);
     const [ph, pm] = (p.time || '18:00').split(':').map(Number);
     if (hh !== ph || mm < pm || mm >= pm + 15) return;
-    const count = countOverdueTasks(calData, todayStr);
+    const count = countOverdueTasks(calData, dateStr);
     if (count === 0) return;
     await sendPushToUser(subscription.subscription, {
       type: 'overdue_alert',
@@ -400,18 +431,18 @@ const NOTIFICATION_TYPES = {
 };
 
 async function runNotificationScheduler() {
+  if (!vapidConfigured) return;
   try {
     const rows = await sql`
       SELECT ps.user_id, ps.subscription, ps.timezone, u.cal_data, u.notification_prefs
       FROM push_subscriptions ps
       JOIN users u ON ps.user_id = u.id
     `;
-    const todayStr = new Date().toISOString().slice(0, 10);
     for (const row of rows) {
       const prefs = row.notification_prefs || {};
       const sub = { subscription: row.subscription, timezone: row.timezone };
       for (const handler of Object.values(NOTIFICATION_TYPES)) {
-        await handler(row.user_id, row.cal_data, prefs, sub, todayStr);
+        await handler(row.user_id, row.cal_data, prefs, sub);
       }
     }
   } catch (err) {

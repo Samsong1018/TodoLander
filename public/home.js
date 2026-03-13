@@ -1035,7 +1035,14 @@ async function loadNotifPrefs() {
     credentials: 'include',
     headers: { 'Authorization': `Bearer ${token}` },
   });
-  if (res.ok) notifPrefs = await res.json();
+  if (res.ok) {
+    const saved = await res.json();
+    // Deep merge so default times are preserved when a key is missing from saved prefs
+    notifPrefs = {
+      morning_digest: { ...notifPrefs.morning_digest, ...saved.morning_digest },
+      overdue_alert:  { ...notifPrefs.overdue_alert,  ...saved.overdue_alert  },
+    };
+  }
 }
 
 async function ensureSubscribed() {
@@ -1067,15 +1074,20 @@ async function handleNotifToggle(type, enabled) {
 
   notifPrefs[type] = { ...notifPrefs[type], enabled };
 
-  // If both types are disabled, remove the subscription entirely
-  const anyEnabled = Object.values(notifPrefs).some(p => p?.enabled);
-  if (!anyEnabled && pushSubscription) {
-    await removeSubscriptionFromServer(pushSubscription.endpoint);
-    await pushSubscription.unsubscribe();
-    pushSubscription = null;
+  try {
+    // If both types are disabled, remove the subscription entirely
+    const anyEnabled = Object.values(notifPrefs).some(p => p?.enabled);
+    if (!anyEnabled && pushSubscription) {
+      await removeSubscriptionFromServer(pushSubscription.endpoint);
+      await pushSubscription.unsubscribe();
+      pushSubscription = null;
+    }
+    await saveNotifPrefs();
+  } catch (err) {
+    console.error('Failed to update notification settings:', err);
+    showToast('Could not save notification settings.', 'error');
   }
 
-  await saveNotifPrefs();
   updateNotifUI();
 }
 
@@ -1091,15 +1103,18 @@ function updateNotifUI() {
 }
 
 async function initNotifications() {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    document.getElementById('notifUnsupported').style.display = 'block';
-    document.getElementById('notifSettings').style.display = 'none';
+  // Hide the entire section on browsers that don't support push (e.g. Safari)
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+  try {
+    await navigator.serviceWorker.register('/sw.js');
+    await loadNotifPrefs();
+    document.getElementById('notifSection').style.display = 'block';
+    updateNotifUI();
+  } catch (err) {
+    console.error('Notification init failed:', err);
     return;
   }
-
-  await navigator.serviceWorker.register('/sw.js');
-  await loadNotifPrefs();
-  updateNotifUI();
 
   document.getElementById('morningDigestToggle').addEventListener('change', e => handleNotifToggle('morning_digest', e.target.checked));
   document.getElementById('overdueAlertToggle').addEventListener('change', e => handleNotifToggle('overdue_alert', e.target.checked));
@@ -1119,7 +1134,7 @@ async function init() {
   await loadFromBackend();
   renderCalendar();
   renderTodos();
-  initNotifications();
+  initNotifications().catch(console.error);
 }
 
 init();
