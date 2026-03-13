@@ -16,7 +16,6 @@ function getToken() {
 }
 
 async function loadFromBackend() {
-  
   const token = getToken();
   if (!token) { window.location.href = './'; return; }
 
@@ -30,7 +29,7 @@ async function loadFromBackend() {
     window.location.href = './';
     return;
   }
-  
+
   const calData = await res.json();
   state.todos          = calData?.todos          || {};
   state.recurring      = calData?.recurring      || [];
@@ -1103,18 +1102,27 @@ function updateNotifUI() {
 }
 
 async function initNotifications() {
-  // Hide the entire section on browsers that don't support push (e.g. Safari)
+  // Hide the entire section on browsers that don't support push (e.g. older Safari)
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
+  // SW registration must succeed — can't use push without it
   try {
     await navigator.serviceWorker.register('/sw.js');
-    await loadNotifPrefs();
-    document.getElementById('notifSection').style.display = 'block';
-    updateNotifUI();
   } catch (err) {
-    console.error('Notification init failed:', err);
+    console.error('Service worker registration failed:', err);
     return;
   }
+
+  // Show the section now that we know push is supported
+  document.getElementById('notifSection').style.display = 'block';
+
+  // Load saved prefs — best-effort, use defaults on any failure
+  try {
+    await loadNotifPrefs();
+  } catch {
+    // defaults already set in notifPrefs
+  }
+  updateNotifUI();
 
   document.getElementById('morningDigestToggle').addEventListener('change', e => handleNotifToggle('morning_digest', e.target.checked));
   document.getElementById('overdueAlertToggle').addEventListener('change', e => handleNotifToggle('overdue_alert', e.target.checked));
