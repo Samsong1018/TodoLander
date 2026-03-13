@@ -970,11 +970,156 @@ document.getElementById('settingsBtn').addEventListener('click', openSettings);
 document.getElementById('settingsClose').addEventListener('click', closeSettings);
 document.getElementById('settingsOverlay').addEventListener('click', closeSettings);
 
+// ── Push notifications ──────────────────────────────────
+let notifPrefs = { morning_digest: { enabled: false, time: '08:00' }, overdue_alert: { enabled: false, time: '18:00' } };
+let pushSubscription = null;
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function getVapidKey() {
+  const res = await fetch(`${API_BASE}/api/push/vapid-key`);
+  const { publicKey } = await res.json();
+  return publicKey;
+}
+
+async function subscribeToPush() {
+  const reg = await navigator.serviceWorker.ready;
+  const vapidKey = await getVapidKey();
+  return reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(vapidKey),
+  });
+}
+
+async function sendSubscriptionToServer(sub) {
+  const token = getToken();
+  await fetch(`${API_BASE}/api/push/subscribe`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({
+      subscription: sub.toJSON(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    }),
+  });
+}
+
+async function removeSubscriptionFromServer(endpoint) {
+  const token = getToken();
+  await fetch(`${API_BASE}/api/push/subscribe`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify({ endpoint }),
+  });
+}
+
+async function saveNotifPrefs() {
+  const token = getToken();
+  await fetch(`${API_BASE}/api/push/prefs`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify(notifPrefs),
+  });
+}
+
+async function loadNotifPrefs() {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/push/prefs`, {
+    credentials: 'include',
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  if (res.ok) notifPrefs = await res.json();
+}
+
+async function ensureSubscribed() {
+  if (pushSubscription) return pushSubscription;
+  const reg = await navigator.serviceWorker.ready;
+  pushSubscription = await reg.pushManager.getSubscription();
+  if (!pushSubscription) pushSubscription = await subscribeToPush();
+  await sendSubscriptionToServer(pushSubscription);
+  return pushSubscription;
+}
+
+async function handleNotifToggle(type, enabled) {
+  if (enabled) {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      showToast('Notification permission denied.', 'error');
+      // revert toggle
+      document.getElementById(type === 'morning_digest' ? 'morningDigestToggle' : 'overdueAlertToggle').checked = false;
+      return;
+    }
+    try {
+      await ensureSubscribed();
+    } catch {
+      showToast('Could not set up push notifications.', 'error');
+      document.getElementById(type === 'morning_digest' ? 'morningDigestToggle' : 'overdueAlertToggle').checked = false;
+      return;
+    }
+  }
+
+  notifPrefs[type] = { ...notifPrefs[type], enabled };
+
+  // If both types are disabled, remove the subscription entirely
+  const anyEnabled = Object.values(notifPrefs).some(p => p?.enabled);
+  if (!anyEnabled && pushSubscription) {
+    await removeSubscriptionFromServer(pushSubscription.endpoint);
+    await pushSubscription.unsubscribe();
+    pushSubscription = null;
+  }
+
+  await saveNotifPrefs();
+  updateNotifUI();
+}
+
+function updateNotifUI() {
+  const morningEnabled = notifPrefs.morning_digest?.enabled || false;
+  const overdueEnabled = notifPrefs.overdue_alert?.enabled || false;
+  document.getElementById('morningDigestToggle').checked = morningEnabled;
+  document.getElementById('overdueAlertToggle').checked = overdueEnabled;
+  document.getElementById('morningTimeRow').style.display = morningEnabled ? 'flex' : 'none';
+  document.getElementById('overdueTimeRow').style.display = overdueEnabled ? 'flex' : 'none';
+  document.getElementById('morningTimeInput').value = notifPrefs.morning_digest?.time || '08:00';
+  document.getElementById('overdueTimeInput').value = notifPrefs.overdue_alert?.time || '18:00';
+}
+
+async function initNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    document.getElementById('notifUnsupported').style.display = 'block';
+    document.getElementById('notifSettings').style.display = 'none';
+    return;
+  }
+
+  await navigator.serviceWorker.register('/sw.js');
+  await loadNotifPrefs();
+  updateNotifUI();
+
+  document.getElementById('morningDigestToggle').addEventListener('change', e => handleNotifToggle('morning_digest', e.target.checked));
+  document.getElementById('overdueAlertToggle').addEventListener('change', e => handleNotifToggle('overdue_alert', e.target.checked));
+
+  document.getElementById('morningTimeInput').addEventListener('change', async e => {
+    notifPrefs.morning_digest = { ...notifPrefs.morning_digest, time: e.target.value };
+    await saveNotifPrefs();
+  });
+  document.getElementById('overdueTimeInput').addEventListener('change', async e => {
+    notifPrefs.overdue_alert = { ...notifPrefs.overdue_alert, time: e.target.value };
+    await saveNotifPrefs();
+  });
+}
+
 // ── Init ───────────────────────────────────────────────
 async function init() {
   await loadFromBackend();
   renderCalendar();
   renderTodos();
+  initNotifications();
 }
 
 init();

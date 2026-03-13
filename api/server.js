@@ -7,6 +7,14 @@ const rateLimit = require('express-rate-limit');
 const path = require('path')
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
+const webpush = require('web-push');
+
+// ── Web Push (VAPID) setup ────────────────────────────
+webpush.setVapidDetails(
+  process.env.VAPID_EMAIL,
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -224,6 +232,197 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// ── Push notification helpers ─────────────────────────
+// Replicates the frontend doesRecurOn logic for server-side task counting
+function doesRecurOn(task, dateStr) {
+  const [ty, tm, td] = task.startDate.split('-').map(Number);
+  const [dy, dm, dd] = dateStr.split('-').map(Number);
+  const start = new Date(ty, tm - 1, td);
+  const date  = new Date(dy, dm - 1, dd);
+  if (date < start) return false;
+  if (task.frequency === 'daily')   return true;
+  if (task.frequency === 'weekly')  return start.getDay() === date.getDay();
+  if (task.frequency === 'monthly') return td === dd;
+  return false;
+}
+
+// Count tasks for a given date from cal_data
+function countTasksForDate(calData, dateStr) {
+  const todos = (calData?.todos?.[dateStr] || []).filter(t => !t.done);
+  const recurring = (calData?.recurring || []).filter(t => {
+    if (!doesRecurOn(t, dateStr)) return false;
+    const ds = calData?.recurringState?.[dateStr] || {};
+    return !ds[t.id]?.dismissed && !ds[t.id]?.done;
+  });
+  return todos.length + recurring.length;
+}
+
+// Count incomplete tasks on dates strictly before today (overdue)
+function countOverdueTasks(calData, todayStr) {
+  let count = 0;
+  for (const [dateStr, todos] of Object.entries(calData?.todos || {})) {
+    if (dateStr >= todayStr) continue;
+    count += todos.filter(t => !t.done).length;
+  }
+  // overdue recurring: dates before today with undismissed, undone instances
+  for (const task of (calData?.recurring || [])) {
+    const [ty, tm, td] = task.startDate.split('-').map(Number);
+    const start = new Date(ty, tm - 1, td);
+    const [dy, dm, dd] = todayStr.split('-').map(Number);
+    const today = new Date(dy, dm - 1, dd);
+    // Only look at dates up to 30 days back to avoid excessive iteration
+    for (let i = 1; i <= 30; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      if (d < start) break;
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      if (!doesRecurOn(task, key)) continue;
+      const ds = calData?.recurringState?.[key] || {};
+      if (!ds[task.id]?.dismissed && !ds[task.id]?.done) count++;
+    }
+  }
+  return count;
+}
+
+async function sendPushToUser(subscription, payload) {
+  try {
+    await webpush.sendNotification(subscription, JSON.stringify(payload));
+  } catch (err) {
+    // 410 Gone means the subscription is no longer valid — remove it
+    if (err.statusCode === 410) {
+      await sql`DELETE FROM push_subscriptions WHERE subscription->>'endpoint' = ${subscription.endpoint}`.catch(() => {});
+    } else {
+      console.error('Push send error:', err.message);
+    }
+  }
+}
+
+// ── Push subscription endpoints ───────────────────────
+// Expose VAPID public key so the frontend can create subscriptions
+app.get('/api/push/vapid-key', (_req, res) => {
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+});
+
+app.post('/api/push/subscribe', (req, res) => {
+  authenticateToken(req, res, async () => {
+    const { subscription, timezone } = req.body;
+    if (!subscription?.endpoint) return res.status(400).json({ error: 'Invalid subscription' });
+    try {
+      // Upsert — delete existing row for this endpoint then insert fresh
+      const endpoint = subscription.endpoint;
+      await sql`DELETE FROM push_subscriptions WHERE user_id = ${req.user.user_id} AND subscription->>'endpoint' = ${endpoint}`;
+      await sql`
+        INSERT INTO push_subscriptions (user_id, subscription, timezone)
+        VALUES (${req.user.user_id}, ${sql.json(subscription)}, ${timezone || 'UTC'})
+      `;
+      res.status(201).json({ message: 'subscribed' });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+});
+
+app.delete('/api/push/subscribe', (req, res) => {
+  authenticateToken(req, res, async () => {
+    const { endpoint } = req.body;
+    try {
+      await sql`
+        DELETE FROM push_subscriptions
+        WHERE user_id = ${req.user.user_id}
+          AND subscription->>'endpoint' = ${endpoint}
+      `;
+      res.status(200).json({ message: 'unsubscribed' });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+});
+
+// Get and update notification preferences
+app.get('/api/push/prefs', (req, res) => {
+  authenticateToken(req, res, async () => {
+    const rows = await sql`SELECT notification_prefs FROM users WHERE id = ${req.user.user_id}`;
+    res.json(rows[0]?.notification_prefs || {});
+  });
+});
+
+app.put('/api/push/prefs', (req, res) => {
+  authenticateToken(req, res, async () => {
+    const prefs = req.body;
+    try {
+      await sql`UPDATE users SET notification_prefs = ${sql.json(prefs)} WHERE id = ${req.user.user_id}`;
+      res.json({ message: 'saved' });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+});
+
+// ── Notification scheduler ────────────────────────────
+// Notification type handlers — add new types here for future expansion
+const NOTIFICATION_TYPES = {
+  morning_digest: async (_userId, calData, prefs, subscription, todayStr) => {
+    const p = prefs.morning_digest;
+    if (!p?.enabled) return;
+    const nowInTz = new Date().toLocaleString('en-US', { timeZone: subscription.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
+    const [hh, mm] = nowInTz.split(':').map(Number);
+    const [ph, pm] = (p.time || '08:00').split(':').map(Number);
+    if (hh !== ph || mm < pm || mm >= pm + 15) return; // only fire in the right 15-min window
+    const count = countTasksForDate(calData, todayStr);
+    if (count === 0) return;
+    await sendPushToUser(subscription.subscription, {
+      type: 'morning_digest',
+      title: 'Good morning!',
+      body: `You have ${count} task${count !== 1 ? 's' : ''} today.`,
+      url: '/home.html',
+    });
+  },
+
+  overdue_alert: async (_userId, calData, prefs, subscription, todayStr) => {
+    const p = prefs.overdue_alert;
+    if (!p?.enabled) return;
+    const nowInTz = new Date().toLocaleString('en-US', { timeZone: subscription.timezone, hour: '2-digit', minute: '2-digit', hour12: false });
+    const [hh, mm] = nowInTz.split(':').map(Number);
+    const [ph, pm] = (p.time || '18:00').split(':').map(Number);
+    if (hh !== ph || mm < pm || mm >= pm + 15) return;
+    const count = countOverdueTasks(calData, todayStr);
+    if (count === 0) return;
+    await sendPushToUser(subscription.subscription, {
+      type: 'overdue_alert',
+      title: 'Tasks need attention',
+      body: `You have ${count} overdue task${count !== 1 ? 's' : ''} from previous days.`,
+      url: '/home.html',
+    });
+  },
+};
+
+async function runNotificationScheduler() {
+  try {
+    const rows = await sql`
+      SELECT ps.user_id, ps.subscription, ps.timezone, u.cal_data, u.notification_prefs
+      FROM push_subscriptions ps
+      JOIN users u ON ps.user_id = u.id
+    `;
+    const todayStr = new Date().toISOString().slice(0, 10);
+    for (const row of rows) {
+      const prefs = row.notification_prefs || {};
+      const sub = { subscription: row.subscription, timezone: row.timezone };
+      for (const handler of Object.values(NOTIFICATION_TYPES)) {
+        await handler(row.user_id, row.cal_data, prefs, sub, todayStr);
+      }
+    }
+  } catch (err) {
+    console.error('Notification scheduler error:', err.message);
+  }
+}
+
+// Run every 15 minutes
+setInterval(runNotificationScheduler, 15 * 60 * 1000);
+runNotificationScheduler(); // run once on startup too
+
 // ── Expired session cleanup (#10) ────────────────────────
 async function purgeExpiredSessions() {
   try {
@@ -245,7 +444,7 @@ setInterval(() => {
 }, 14 * 60 * 1000);
 
 // Add a lightweight health endpoint to ping
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
