@@ -180,7 +180,6 @@ function renderCalendar() {
 
 function selectDay(key) {
   state.selectedDate = key;
-  state.colorFilter = null;
   renderCalendar();
   renderTodos();
 }
@@ -582,9 +581,10 @@ function deleteAllTodos() {
 
 function buildColorFilterBar() {
   const swatchContainer = document.getElementById('colorFilterSwatches');
+  const clearBtn = document.getElementById('colorFilterClear');
   if (!swatchContainer) return;
-  swatchContainer.innerHTML = '';
 
+  // Insert swatches before the clear button (which lives inside swatchContainer)
   TODO_COLORS.forEach(({ value, label }) => {
     const swatch = document.createElement('div');
     swatch.className = `color-filter-swatch${value === null ? ' none' : ''}`;
@@ -592,22 +592,19 @@ function buildColorFilterBar() {
     swatch.dataset.colorValue = value === null ? '__null__' : value;
     if (value) swatch.style.background = value;
     swatch.addEventListener('click', () => {
-      if (state.colorFilter === value) {
-        state.colorFilter = null;
-      } else {
-        state.colorFilter = value;
-      }
+      state.colorFilter = state.colorFilter === value ? null : value;
       updateColorFilterBar();
+      renderCalendar();
       renderTodos();
     });
-    swatchContainer.appendChild(swatch);
+    swatchContainer.insertBefore(swatch, clearBtn);
   });
 
-  const clearBtn = document.getElementById('colorFilterClear');
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       state.colorFilter = null;
       updateColorFilterBar();
+      renderCalendar();
       renderTodos();
     });
   }
@@ -879,7 +876,8 @@ function importJSON(data) {
                  : null;
       if (!text) continue;
       if (existingTexts.has(text.toLowerCase())) continue;
-      existing.push({ text, done: false, id: Date.now() + Math.random() });
+      const color = (typeof item === 'object' && item !== null && typeof item.color === 'string') ? item.color : null;
+      existing.push({ text, color, done: false, id: Date.now() + Math.random() });
       existingTexts.add(text.toLowerCase());
       imported++;
     }

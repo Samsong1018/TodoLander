@@ -965,13 +965,21 @@ body.compact .todo-item { padding: 6px 10px; gap: 8px; }
 .color-filter-bar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
-  flex-wrap: wrap;
 }
-.color-filter-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); }
+.color-filter-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+.color-filter-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); white-space: nowrap; }
 .color-filter-swatches { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .color-filter-swatch {
   width: 18px; height: 18px; border-radius: 50%; cursor: pointer;
