@@ -963,7 +963,7 @@ body.compact .todo-item { padding: 6px 10px; gap: 8px; }
 
 /* ── Color Filter Bar ── */
 .color-filter-bar {
-  display: none;
+  display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 14px;

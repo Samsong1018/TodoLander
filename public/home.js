@@ -18,6 +18,7 @@ function getToken() {
 
 async function loadFromBackend() {
   const token = getToken();
+  
   if (!token) { window.location.href = './'; return; }
 
   const res = await fetch(`${API_BASE}/api/user`, {
@@ -30,7 +31,7 @@ async function loadFromBackend() {
     window.location.href = './';
     return;
   }
-
+  
   const calData = await res.json();
   state.todos          = calData?.todos          || {};
   state.recurring      = calData?.recurring      || [];
@@ -215,8 +216,6 @@ function renderTodos() {
   if (!selectedDate) {
     noDayMsg.classList.remove('hidden');
     dayContent.classList.remove('visible');
-    const cfb = document.getElementById('colorFilterBar');
-    if (cfb) cfb.style.display = 'none';
     return;
   }
 
@@ -290,12 +289,7 @@ function renderTodos() {
     progressBarWrap.style.display = 'none';
   }
 
-  // Show/update color filter bar
-  const cfb = document.getElementById('colorFilterBar');
-  if (cfb) {
-    cfb.style.display = 'flex';
-    updateColorFilterBar();
-  }
+  updateColorFilterBar();
 }
 
 // ── Todo element ───────────────────────────────────────
@@ -1334,9 +1328,10 @@ async function initNotifications() {
 }
 
 // ── Init ───────────────────────────────────────────────
+buildColorFilterBar();
+
 async function init() {
   await loadFromBackend();
-  buildColorFilterBar();
   renderCalendar();
   renderTodos();
   initNotifications().catch(console.error);
