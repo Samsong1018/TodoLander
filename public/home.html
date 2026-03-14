@@ -211,6 +211,11 @@
         <span>Thu</span><span>Fri</span><span>Sat</span>
       </div>
       <div class="cal-grid" id="calGrid"></div>
+      <div class="color-filter-bar" id="colorFilterBar" style="display:none;">
+        <span class="color-filter-label">Filter:</span>
+        <div class="color-filter-swatches" id="colorFilterSwatches"></div>
+        <button class="color-filter-clear" id="colorFilterClear" style="display:none;">&#x2715;</button>
+      </div>
     </div>
 
     <!-- Todo Panel -->
@@ -232,7 +237,10 @@
             <h2 id="panelTitle">Tasks</h2>
             <div class="todo-date-label" id="panelDate"></div>
           </div>
-          <button class="btn btn-sm btn-danger" id="clearDoneBtn">Clear done</button>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn btn-sm btn-danger" id="clearDoneBtn">Clear done</button>
+            <button class="btn btn-sm btn-danger" id="deleteAllBtn">Delete all</button>
+          </div>
         </div>
         <div class="todo-list" id="todoList"></div>
         <div class="stats" id="statsBar" style="display:none;">

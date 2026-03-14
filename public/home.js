@@ -6,6 +6,7 @@ let state = {
   year: new Date().getFullYear(),
   month: new Date().getMonth(),
   selectedDate: null,
+  colorFilter: null,
   todos: {},
   recurring: [],
   recurringState: {},
@@ -99,6 +100,16 @@ function hasTasks(dateStr) {
   });
 }
 
+function hasTasksOfColor(dateStr, color) {
+  if (getTodos(dateStr).some(t => (t.color ?? null) === color)) return true;
+  return state.recurring.some(t => {
+    if ((t.color ?? null) !== color) return false;
+    if (!doesRecurOn(t, dateStr)) return false;
+    const ds = state.recurringState[dateStr] || {};
+    return !ds[t.id]?.dismissed;
+  });
+}
+
 function hasPastIncomplete(dateStr) {
   const [dy, dm, dd] = dateStr.split('-').map(Number);
   const date = new Date(dy, dm - 1, dd);
@@ -152,7 +163,7 @@ function renderCalendar() {
 
     const isToday    = today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
     const isSelected = selectedDate === key;
-    const hasAny     = hasTasks(key);
+    const hasAny     = state.colorFilter !== null ? hasTasksOfColor(key, state.colorFilter) : hasTasks(key);
     const isOverdue  = !isToday && hasPastIncomplete(key);
 
     if (isToday)    el.classList.add('today');
@@ -168,6 +179,7 @@ function renderCalendar() {
 
 function selectDay(key) {
   state.selectedDate = key;
+  state.colorFilter = null;
   renderCalendar();
   renderTodos();
 }
@@ -203,11 +215,24 @@ function renderTodos() {
   if (!selectedDate) {
     noDayMsg.classList.remove('hidden');
     dayContent.classList.remove('visible');
+    const cfb = document.getElementById('colorFilterBar');
+    if (cfb) cfb.style.display = 'none';
     return;
   }
 
   noDayMsg.classList.add('hidden');
   dayContent.classList.add('visible');
+
+  // Restore delete-all button if inline confirm is open
+  const existingConfirm = document.getElementById('deleteAllConfirm');
+  if (existingConfirm) {
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-sm btn-danger';
+    btn.id = 'deleteAllBtn';
+    btn.textContent = 'Delete all';
+    btn.addEventListener('click', showDeleteAllConfirm);
+    existingConfirm.replaceWith(btn);
+  }
 
   const [y, m, d] = selectedDate.split('-').map(Number);
   const dateObj = new Date(y, m - 1, d);
@@ -216,17 +241,28 @@ function renderTodos() {
 
   const todos      = getTodos(selectedDate);
   const applicable = getApplicableRecurring(selectedDate);
-  const list       = document.getElementById('todoList');
-  list.innerHTML   = '';
+
+  const visibleTodos = state.colorFilter !== null
+    ? todos.filter(t => (t.color ?? null) === state.colorFilter)
+    : todos;
+  const visibleRecurring = state.colorFilter !== null
+    ? applicable.filter(t => (t.color ?? null) === state.colorFilter)
+    : applicable;
+
+  const list = document.getElementById('todoList');
+  list.innerHTML = '';
 
   const showCompleted = localStorage.getItem('showCompleted') !== 'false';
   if (todos.length === 0 && applicable.length === 0) {
     list.innerHTML = '<div class="empty-list">No tasks yet. Add one above.</div>';
+  } else if (visibleTodos.length === 0 && visibleRecurring.length === 0) {
+    list.innerHTML = '<div class="empty-list">No tasks match the filter.</div>';
   } else {
-    todos.forEach((todo, idx) => {
-      if (showCompleted || !todo.done) list.appendChild(makeTodoEl(todo, idx));
+    visibleTodos.forEach((todo, _) => {
+      const origIdx = todos.indexOf(todo);
+      if (showCompleted || !todo.done) list.appendChild(makeTodoEl(todo, origIdx));
     });
-    applicable.forEach(task => {
+    visibleRecurring.forEach(task => {
       const isDone = (state.recurringState[selectedDate] || {})[task.id]?.done;
       if (showCompleted || !isDone) list.appendChild(makeRecurringEl(task, selectedDate));
     });
@@ -235,6 +271,7 @@ function renderTodos() {
     }
   }
 
+  // Stats use unfiltered counts
   const recurDone = applicable.filter(t => (state.recurringState[selectedDate] || {})[t.id]?.done).length;
   const done  = todos.filter(t => t.done).length + recurDone;
   const total = todos.length + applicable.length;
@@ -251,6 +288,13 @@ function renderTodos() {
   } else {
     statsBar.style.display        = 'none';
     progressBarWrap.style.display = 'none';
+  }
+
+  // Show/update color filter bar
+  const cfb = document.getElementById('colorFilterBar');
+  if (cfb) {
+    cfb.style.display = 'flex';
+    updateColorFilterBar();
   }
 }
 
@@ -341,8 +385,15 @@ function makeTodoEl(todo, idx) {
   delBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
   delBtn.addEventListener('click', () => showTodoDeleteConfirm(idx, item, actions));
 
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'icon-btn copy';
+  copyBtn.title = 'Copy to another day';
+  copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+  copyBtn.addEventListener('click', () => showCopyDatePicker(todo, item, actions));
+
   actions.appendChild(colorBtn);
   actions.appendChild(editBtn);
+  actions.appendChild(copyBtn);
   actions.appendChild(delBtn);
 
   item.appendChild(colorBar);
@@ -434,6 +485,149 @@ function showTodoDeleteConfirm(idx, item, actions) {
 
   item.replaceChild(confirmDiv, actions);
   item.style.borderColor = 'var(--danger)';
+}
+
+function showCopyDatePicker(todo, item, actions) {
+  const picker = document.createElement('div');
+  picker.className = 'copy-picker';
+
+  const label = document.createElement('span');
+  label.textContent = 'Copy to:';
+
+  const dateInput = document.createElement('input');
+  dateInput.type = 'date';
+  dateInput.className = 'copy-date-input';
+  dateInput.value = state.selectedDate || '';
+
+  const copyConfirmBtn = document.createElement('button');
+  copyConfirmBtn.className = 'btn-recur-day';
+  copyConfirmBtn.textContent = 'Copy';
+  copyConfirmBtn.addEventListener('click', () => {
+    const target = dateInput.value;
+    if (target) copyTodoToDate(todo, target);
+    item.replaceChild(actions, picker);
+  });
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn-recur-day';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', () => {
+    item.replaceChild(actions, picker);
+  });
+
+  picker.appendChild(label);
+  picker.appendChild(dateInput);
+  picker.appendChild(copyConfirmBtn);
+  picker.appendChild(cancelBtn);
+
+  item.replaceChild(picker, actions);
+  dateInput.focus();
+}
+
+function copyTodoToDate(todo, targetDate) {
+  if (!state.todos[targetDate]) state.todos[targetDate] = [];
+  state.todos[targetDate].push({
+    text: todo.text,
+    color: todo.color || null,
+    done: false,
+    id: Date.now() + Math.random(),
+  });
+  saveTodos();
+  renderCalendar();
+  showToast(`Copied to ${targetDate}.`);
+}
+
+function showDeleteAllConfirm() {
+  const btn = document.getElementById('deleteAllBtn');
+  if (!btn) return;
+
+  const confirmDiv = document.createElement('div');
+  confirmDiv.className = 'recur-confirm';
+  confirmDiv.id = 'deleteAllConfirm';
+
+  const label = document.createElement('span');
+  label.textContent = state.colorFilter !== null ? 'Delete all (this color, all days)?' : 'Delete ALL tasks (all days)?';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn-recur-day';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', () => {
+    const newBtn = document.createElement('button');
+    newBtn.className = 'btn btn-sm btn-danger';
+    newBtn.id = 'deleteAllBtn';
+    newBtn.textContent = 'Delete all';
+    newBtn.addEventListener('click', showDeleteAllConfirm);
+    confirmDiv.replaceWith(newBtn);
+  });
+
+  const delConfirmBtn = document.createElement('button');
+  delConfirmBtn.className = 'btn-recur-all';
+  delConfirmBtn.textContent = 'Delete';
+  delConfirmBtn.addEventListener('click', deleteAllTodos);
+
+  confirmDiv.appendChild(label);
+  confirmDiv.appendChild(cancelBtn);
+  confirmDiv.appendChild(delConfirmBtn);
+
+  btn.replaceWith(confirmDiv);
+}
+
+function deleteAllTodos() {
+  if (state.colorFilter !== null) {
+    for (const key of Object.keys(state.todos)) {
+      state.todos[key] = state.todos[key].filter(t => (t.color ?? null) !== state.colorFilter);
+      if (state.todos[key].length === 0) delete state.todos[key];
+    }
+  } else {
+    state.todos = {};
+  }
+  saveTodos();
+  renderCalendar();
+  renderTodos();
+}
+
+function buildColorFilterBar() {
+  const swatchContainer = document.getElementById('colorFilterSwatches');
+  if (!swatchContainer) return;
+  swatchContainer.innerHTML = '';
+
+  TODO_COLORS.forEach(({ value, label }) => {
+    const swatch = document.createElement('div');
+    swatch.className = `color-filter-swatch${value === null ? ' none' : ''}`;
+    swatch.title = label;
+    swatch.dataset.colorValue = value === null ? '__null__' : value;
+    if (value) swatch.style.background = value;
+    swatch.addEventListener('click', () => {
+      if (state.colorFilter === value) {
+        state.colorFilter = null;
+      } else {
+        state.colorFilter = value;
+      }
+      updateColorFilterBar();
+      renderTodos();
+    });
+    swatchContainer.appendChild(swatch);
+  });
+
+  const clearBtn = document.getElementById('colorFilterClear');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      state.colorFilter = null;
+      updateColorFilterBar();
+      renderTodos();
+    });
+  }
+}
+
+function updateColorFilterBar() {
+  const swatchContainer = document.getElementById('colorFilterSwatches');
+  if (!swatchContainer) return;
+  swatchContainer.querySelectorAll('.color-filter-swatch').forEach(swatch => {
+    const val = swatch.dataset.colorValue === '__null__' ? null : swatch.dataset.colorValue;
+    swatch.classList.toggle('active', state.colorFilter === val);
+  });
+  const clearBtn = document.getElementById('colorFilterClear');
+  if (clearBtn) clearBtn.style.display = state.colorFilter !== null ? '' : 'none';
 }
 
 function toggleTodo(idx) {
@@ -638,6 +832,8 @@ document.getElementById('newTaskInput').addEventListener('keydown', e => {
     if (val) { addTodo(val, freq); e.target.value = ''; document.getElementById('repeatSelect').value = 'none'; }
   }
 });
+
+document.getElementById('deleteAllBtn').addEventListener('click', showDeleteAllConfirm);
 
 document.getElementById('clearDoneBtn').addEventListener('click', () => {
   const key = state.selectedDate;
@@ -1140,6 +1336,7 @@ async function initNotifications() {
 // ── Init ───────────────────────────────────────────────
 async function init() {
   await loadFromBackend();
+  buildColorFilterBar();
   renderCalendar();
   renderTodos();
   initNotifications().catch(console.error);
