@@ -1,0 +1,19 @@
+git branch (shows what branch your on)
+git checkout -b <branch name> (change branch if not right)
+
+git add . 
+git commit -m "notes here"
+git push
+
+Productivity                                                                                                                                                                      
+  - Copy tasks to another day — useful for rescheduling something without re-typing it
+  - Carry over incomplete tasks — a button/option to move yesterday's undone tasks to today                                                                                       
+  - Due time on tasks — optional time field so "Doctor appointment at 2pm" is actually sortable/visible in context
+
+Recurring tasks
+  - Day-of-week selection for weekly — right now "weekly" just recurs on the same weekday as start, but there's no way to set "every Mon/Wed/Fri" style patterns
+
+UX
+  - Month navigation with task count badges on calendar days — you already have dot indicators but a count would be more useful at a glance
+  - Undo — accidental deletes are permanent right now; a brief undo toast after delete would be low-effort and very useful
+  - move completed tasks to bottom? settings option?
