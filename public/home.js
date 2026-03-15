@@ -19,18 +19,18 @@ function getToken() {
 async function loadFromBackend() {
   const token = getToken();
   
-  if (!token) { window.location.href = './'; return; }
+  // if (!token) { window.location.href = './'; return; }
 
   const res = await fetch(`${API_BASE}/api/user`, {
     credentials: 'include',
     headers: { 'Authorization': `Bearer ${token}` },
   });
 
-  if (res.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    window.location.href = './';
-    return;
-  }
+  // if (res.status === 401) {
+  //   localStorage.removeItem(TOKEN_KEY);
+  //   window.location.href = './';
+  //   return;
+  // }
   
   const calData = await res.json();
   state.todos          = calData?.todos          || {};
@@ -251,16 +251,28 @@ function renderTodos() {
   list.innerHTML = '';
 
   const showCompleted = localStorage.getItem('showCompleted') !== 'false';
+  const doneToBottom  = localStorage.getItem('doneToBottom') !== 'false';
+
+  let orderedTodos = visibleTodos;
+  let orderedRecurring = visibleRecurring;
+  if (doneToBottom) {
+    orderedTodos     = [...visibleTodos].sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
+    orderedRecurring = [...visibleRecurring].sort((a, b) => {
+      const ds = state.recurringState[selectedDate] || {};
+      return ((ds[a.id]?.done ? 1 : 0) - (ds[b.id]?.done ? 1 : 0));
+    });
+  }
+
   if (todos.length === 0 && applicable.length === 0) {
     list.innerHTML = '<div class="empty-list">No tasks yet. Add one above.</div>';
   } else if (visibleTodos.length === 0 && visibleRecurring.length === 0) {
     list.innerHTML = '<div class="empty-list">No tasks match the filter.</div>';
   } else {
-    visibleTodos.forEach((todo, _) => {
+    orderedTodos.forEach(todo => {
       const origIdx = todos.indexOf(todo);
       if (showCompleted || !todo.done) list.appendChild(makeTodoEl(todo, origIdx));
     });
-    visibleRecurring.forEach(task => {
+    orderedRecurring.forEach(task => {
       const isDone = (state.recurringState[selectedDate] || {})[task.id]?.done;
       if (showCompleted || !isDone) list.appendChild(makeRecurringEl(task, selectedDate));
     });
@@ -1129,6 +1141,13 @@ document.getElementById('weekStartToggle').addEventListener('change', e => {
 document.getElementById('showCompletedToggle').checked = localStorage.getItem('showCompleted') !== 'false';
 document.getElementById('showCompletedToggle').addEventListener('change', e => {
   localStorage.setItem('showCompleted', e.target.checked ? 'true' : 'false');
+  renderTodos();
+});
+
+// ── Done to bottom ──────────────────────────────────────
+document.getElementById('doneToBottomToggle').checked = localStorage.getItem('doneToBottom') !== 'false';
+document.getElementById('doneToBottomToggle').addEventListener('change', e => {
+  localStorage.setItem('doneToBottom', e.target.checked ? 'true' : 'false');
   renderTodos();
 });
 
