@@ -6,14 +6,15 @@ A full-stack daily todo and calendar app with recurring task support, built with
 
 ## Features
 
-- **Calendar view** — navigate months, select days, see task indicators
+- **Calendar view** — navigate months, select days, see task dot indicators (green = has tasks, red = overdue)
 - **Daily todos** — add, edit, delete, reorder (drag & drop), and color-code tasks
 - **Recurring tasks** — daily, weekly, or monthly tasks that appear automatically
 - **Per-day recurring state** — mark recurring tasks done or dismissed independently each day
-- **Color labels** — 8 color options per task for visual organization
-- **Search** — full-text search across all tasks and dates
+- **Color labels** — 8 color options per task (red, orange, yellow, green, blue, purple, pink, none)
+- **Search** — full-text search across all tasks and dates, with highlighted matches
 - **Import / Export** — JSON bulk import, JSON export, iCal (`.ics`) export
-- **Settings** — dark/light mode, compact view, week start day, show/hide completed tasks
+- **Push notifications** — opt-in browser push notifications for a morning task digest and/or an overdue task alert; configurable times; requires VAPID keys on the server
+- **Settings** — dark/light mode, compact view, week start day (Sun/Mon), show/hide completed tasks
 - **Secure auth** — session-based authentication with httpOnly cookies and rate limiting
 
 ---
@@ -44,8 +45,8 @@ DailyTodo/
 ├── public/                 # Frontend (static files served by Express)
 │   ├── index.html          # Auth page (Sign In / Sign Up)
 │   ├── home.html           # Main app page
-│   ├── home.js             # App logic (~1000 lines, vanilla JS)
-│   ├── home.css            # Styles (~950 lines)
+│   ├── home.js             # App logic (~1350 lines, vanilla JS)
+│   ├── home.css            # Styles (~1000 lines)
 │   └── favicon.svg
 ├── example-tasks.json      # Sample JSON for the import feature
 └── README.md
@@ -226,6 +227,9 @@ const res = await fetch('/api/login', ...)
 |----------|----------|-------------|
 | `PORT` | No | Port the server listens on (default: `3000`) |
 | `DATABASE_URL` | Yes | Full PostgreSQL connection string |
+| `VAPID_PUBLIC_KEY` | For push notifications | VAPID public key (generate with `npx web-push generate-vapid-keys`) |
+| `VAPID_PRIVATE_KEY` | For push notifications | VAPID private key |
+| `VAPID_SUBJECT` | For push notifications | `mailto:` address or URL identifying the push sender |
 
 ---
 
@@ -245,24 +249,49 @@ const res = await fetch('/api/login', ...)
 
 ### JSON Import
 
-Click the **Import** button in the toolbar and paste a JSON object where keys are dates (`YYYY-MM-DD`) and values are arrays of task strings or objects:
+Click the **Import JSON** button in the toolbar and select a `.json` file. The file must be an object where keys are dates (`YYYY-MM-DD`) and values are arrays of task strings or objects:
 
 ```json
 {
   "2026-03-15": ["Buy milk", "Call the bank"],
-  "2026-03-16": ["Team standup", "Review PR"]
+  "2026-03-16": [
+    { "text": "Team standup" },
+    { "text": "Review PR", "done": true }
+  ]
 }
 ```
+
+- Plain strings and objects with a `text` field are both accepted
+- Duplicate tasks (same text on the same day) are skipped automatically
+- Entries with an invalid date key or non-array value are skipped with a warning count
+- Click the **ⓘ** button next to Import for an in-app format reference
 
 See `example-tasks.json` in the repo root for a full example.
 
 ### JSON Export
 
-Downloads your full todo dataset as a JSON file.
+Downloads your full todo dataset as a `.json` file.
 
 ### iCal Export
 
 Downloads a `.ics` calendar file compatible with Apple Calendar, Google Calendar, Outlook, and other calendar apps. Recurring tasks are exported with proper `RRULE` entries.
+
+---
+
+## Push Notifications
+
+Push notifications are opt-in and require browser notification permission. The notifications section appears automatically in Settings if the browser supports the Push API. Two notification types are available:
+
+| Notification | Default time | Description |
+|---|---|---|
+| **Morning task reminder** | 08:00 | Sends a digest of today's pending tasks each morning |
+| **Overdue task alert** | 18:00 | Alerts you if there are incomplete tasks from previous days |
+
+### Server-side requirements
+
+Push notifications require additional environment variables and a running service worker. You'll need to generate a VAPID key pair and expose a `/api/push/vapid-key` endpoint. The backend must also handle push subscription registration and schedule/send notifications via the Web Push protocol.
+
+If `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` are not set, the notifications section is hidden in the UI.
 
 ---
 
