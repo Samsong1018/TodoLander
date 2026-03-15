@@ -81,7 +81,7 @@
       </div>
       <div class="info-modal-body">
         <p>The import file must be a <strong>.json</strong> file containing an object where each key is a date in <code>YYYY-MM-DD</code> format and each value is an array of tasks for that day.</p>
-        <p>Tasks can be plain strings <strong>or</strong> objects with a <code>text</code> field:</p>
+        <p>Tasks can be plain strings <strong>or</strong> objects with a <code>text</code> field. The <code>color</code> field is optional:</p>
         <div class="info-code-block">{
   "2026-03-10": [
     "Team standup at 9am",
@@ -89,10 +89,11 @@
   ],
   "2026-03-11": [
     { "text": "Doctor appointment at 2pm" },
-    { "text": "Renew car registration", "done": true }
+    { "text": "Renew car registration", "done": true },
+    { "text": "Buy groceries", "color": "#22c55e" }
   ]
 }</div>
-        <p>Duplicate tasks (same text on the same day) are skipped automatically. Any entries with an invalid date key or non-array value are skipped with a warning count.</p>
+        <p>Supported colors: <code>#ef4444</code> red, <code>#f97316</code> orange, <code>#eab308</code> yellow, <code>#22c55e</code> green, <code>#3b82f6</code> blue, <code>#6c63ff</code> purple, <code>#ec4899</code> pink. Duplicate tasks (same text on the same day) are skipped automatically.</p>
       </div>
       <div class="info-modal-footer">
         <a href="calendar-json-skill.skill" download class="btn-download">
@@ -158,6 +159,16 @@
           <span class="toggle-track"></span>
         </label>
       </div>
+      <div class="settings-row">
+        <span class="settings-row-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+          Move completed to bottom
+        </span>
+        <label class="toggle">
+          <input type="checkbox" id="doneToBottomToggle" />
+          <span class="toggle-track"></span>
+        </label>
+      </div>
 
       <div id="notifSection" style="display:none;">
         <div class="settings-section-label">Notifications</div>
@@ -211,6 +222,15 @@
         <span>Thu</span><span>Fri</span><span>Sat</span>
       </div>
       <div class="cal-grid" id="calGrid"></div>
+      <div class="color-filter-bar" id="colorFilterBar">
+        <div class="color-filter-left">
+          <span class="color-filter-label">Filter:</span>
+          <div class="color-filter-swatches" id="colorFilterSwatches">
+            <button class="color-filter-clear" id="colorFilterClear" style="display:none;">&#x2715;</button>
+          </div>
+        </div>
+        <button class="btn btn-sm btn-danger" id="deleteAllBtn">Delete all</button>
+      </div>
     </div>
 
     <!-- Todo Panel -->
