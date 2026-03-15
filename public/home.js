@@ -19,18 +19,18 @@ function getToken() {
 async function loadFromBackend() {
   const token = getToken();
   
-  // if (!token) { window.location.href = './'; return; }
+  if (!token) { window.location.href = './'; return; }
 
   const res = await fetch(`${API_BASE}/api/user`, {
     credentials: 'include',
     headers: { 'Authorization': `Bearer ${token}` },
   });
 
-  // if (res.status === 401) {
-  //   localStorage.removeItem(TOKEN_KEY);
-  //   window.location.href = './';
-  //   return;
-  // }
+  if (res.status === 401) {
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.href = './';
+    return;
+  }
   
   const calData = await res.json();
   state.todos          = calData?.todos          || {};
