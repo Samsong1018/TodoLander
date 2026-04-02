@@ -8,35 +8,38 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="TodoLander" />
-  <meta name="theme-color" content="#0f1117" />
+  <meta name="theme-color" content="#0c0e1a" />
   <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --surface2: #222536;
-      --border: #2e3247;
+      --bg: #0c0e1a;
+      --surface: #13162a;
+      --surface2: #1b1f38;
+      --border: #252a47;
       --accent: #6c63ff;
       --accent-hover: #7d75ff;
-      --accent-dim: rgba(108, 99, 255, 0.15);
-      --text: #e2e4f0;
+      --accent-dim: rgba(108, 99, 255, 0.18);
+      --text: #e8eaf6;
       --text-muted: #6b7280;
       --text-dim: #9ca3af;
       --danger: #ef4444;
       --danger-dim: rgba(239, 68, 68, 0.15);
       --success: #22c55e;
-      --radius: 12px;
-      --radius-sm: 8px;
+      --radius: 16px;
+      --radius-sm: 10px;
     }
 
     body.light {
-      --bg: #f5f6fa;
+      --bg: #f0f1ff;
       --surface: #ffffff;
-      --surface2: #eef0f8;
-      --border: #dde0f0;
-      --text: #1a1d27;
+      --surface2: #eef0fb;
+      --border: #dde0f4;
+      --text: #1a1d3a;
       --text-muted: #6b7280;
       --text-dim: #4b5563;
       --accent-dim: rgba(108, 99, 255, 0.1);
@@ -44,7 +47,7 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -53,34 +56,146 @@
       align-items: center;
       justify-content: center;
       padding: 24px 16px;
+      position: relative;
+      overflow: hidden;
     }
 
+    /* Dot grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body.light::before {
+      background-image: radial-gradient(circle, rgba(80,80,160,0.07) 1px, transparent 1px);
+    }
+
+    /* Floating color orbs */
+    .bg-orb {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(90px);
+      z-index: 0;
+    }
+    .bg-orb-1 {
+      width: 520px;
+      height: 520px;
+      background: radial-gradient(circle, rgba(108,99,255,0.35) 0%, transparent 70%);
+      top: -160px;
+      left: -160px;
+      animation: orbFloat1 14s ease-in-out infinite;
+    }
+    .bg-orb-2 {
+      width: 380px;
+      height: 380px;
+      background: radial-gradient(circle, rgba(56,189,248,0.2) 0%, transparent 70%);
+      bottom: -100px;
+      right: -100px;
+      animation: orbFloat2 18s ease-in-out infinite;
+    }
+    .bg-orb-3 {
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(244,114,182,0.18) 0%, transparent 70%);
+      bottom: 28%;
+      left: 8%;
+      animation: orbFloat3 11s ease-in-out infinite;
+    }
+
+    @keyframes orbFloat1 {
+      0%, 100% { transform: translate(0, 0); }
+      33%       { transform: translate(28px, 22px); }
+      66%       { transform: translate(-12px, 34px); }
+    }
+    @keyframes orbFloat2 {
+      0%, 100% { transform: translate(0, 0); }
+      50%       { transform: translate(-22px, -18px); }
+    }
+    @keyframes orbFloat3 {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50%       { transform: translate(14px, -10px) scale(1.12); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .bg-orb { animation: none; }
+    }
+
+    /* Content layer above bg */
+    .brand, .card, .footer-text { position: relative; z-index: 1; }
+
+    /* ─── Brand ─── */
     .brand {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 32px;
+      gap: 0;
+      margin-bottom: 28px;
+      text-align: center;
     }
-    .logo-text {
-      font-size: clamp(2.5rem, 6vw, 4.5rem);
-      font-weight: 700;
-      letter-spacing: -1px;
-      color: var(--text);
-    }
-    .logo-accent { color: var(--accent); }
 
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .logo-text {
+      font-size: clamp(1.9rem, 5vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .logo-accent {
+      background: linear-gradient(135deg, #7c6ef0 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .brand-tagline {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 7px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* ─── Card ─── */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 32px;
+      padding: 28px;
       width: clamp(300px, 90vw, 420px);
-      /* fixed height so switching tabs never resizes the card */
       min-height: 420px;
       position: relative;
+      box-shadow:
+        0 0 0 1px rgba(108,99,255,0.08),
+        0 24px 64px rgba(0,0,0,0.45),
+        0 0 90px rgba(108,99,255,0.07);
     }
 
-    /* Tab switcher */
+    /* Gradient accent stripe at top of card */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 24px;
+      right: 24px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #6c63ff 30%, #a78bfa 70%, transparent);
+      border-radius: 0 0 4px 4px;
+    }
+
+    /* ─── Tabs ─── */
     .tabs {
       display: flex;
       background: var(--surface2);
@@ -88,25 +203,27 @@
       border-radius: var(--radius-sm);
       padding: 4px;
       gap: 4px;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
 
     .tab {
       flex: 1;
-      padding: 8px;
+      padding: 9px;
       background: transparent;
       border: none;
-      border-radius: 6px;
+      border-radius: 7px;
       color: var(--text-muted);
       font-size: 0.875rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s, color 0.15s;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
     }
 
     .tab.active {
       background: var(--accent);
       color: #fff;
+      box-shadow: 0 2px 14px rgba(108,99,255,0.45);
     }
 
     .tab:not(.active):hover {
@@ -114,21 +231,18 @@
       color: var(--text-dim);
     }
 
-    /* Forms — both occupy the same space so the card never resizes */
-    .forms-container {
-      position: relative;
-    }
+    /* ─── Forms ─── */
+    .forms-container { position: relative; }
+
     .form {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
       opacity: 0;
       pointer-events: none;
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      transition: opacity 0.15s;
+      top: 0; left: 0; right: 0;
+      transition: opacity 0.2s;
     }
     .form.active {
       opacity: 1;
@@ -136,13 +250,14 @@
       position: relative;
     }
 
-    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
 
     label {
-      font-size: 0.8rem;
-      font-weight: 600;
+      font-size: 0.73rem;
+      font-weight: 700;
       color: var(--text-dim);
-      letter-spacing: 0.02em;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
     }
 
     .input-wrap {
@@ -156,30 +271,31 @@
     input[type="password"] {
       width: 100%;
       background: var(--surface2);
-      border: 1px solid var(--border);
+      border: 1.5px solid var(--border);
       border-radius: var(--radius-sm);
       color: var(--text);
-      padding: 10px 12px;
+      padding: 10px 13px;
       font-size: 0.875rem;
+      font-family: inherit;
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
     input[type="text"]::placeholder,
     input[type="email"]::placeholder,
     input[type="password"]::placeholder {
       color: var(--text-muted);
+      font-weight: 400;
     }
 
     input[type="text"]:focus,
     input[type="email"]:focus,
     input[type="password"]:focus {
       border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
     }
 
-    .input-wrap input {
-      padding-right: 40px;
-    }
+    .input-wrap input { padding-right: 40px; }
 
     .toggle-pw {
       position: absolute;
@@ -196,55 +312,64 @@
       transition: color 0.15s;
       flex-shrink: 0;
     }
-
     .toggle-pw:hover { color: var(--text); }
 
+    /* ─── Submit button ─── */
     .submit-btn {
-      background: var(--accent);
+      background: linear-gradient(135deg, #6c63ff 0%, #8578ff 100%);
       color: #fff;
       border: none;
       border-radius: var(--radius-sm);
-      padding: 11px;
+      padding: 12px;
       font-size: 0.9rem;
-      font-weight: 600;
+      font-weight: 700;
+      font-family: inherit;
+      letter-spacing: 0.02em;
       cursor: pointer;
-      transition: background 0.15s;
       margin-top: 4px;
+      box-shadow: 0 4px 18px rgba(108,99,255,0.35);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(108,99,255,0.5);
+    }
+    .submit-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(108,99,255,0.3);
     }
 
-    .submit-btn:hover { background: var(--accent-hover); }
-
+    /* ─── Error message ─── */
     .error-msg {
       font-size: 0.8rem;
+      font-weight: 500;
       color: var(--danger);
       background: var(--danger-dim);
-      border: 1px solid rgba(239, 68, 68, 0.25);
+      border: 1px solid rgba(239,68,68,0.25);
       border-radius: var(--radius-sm);
       padding: 9px 12px;
       display: none;
     }
-
     .error-msg.visible { display: block; }
 
     .divider {
       border: none;
       border-top: 1px solid var(--border);
-      margin: 4px 0;
+      margin: 2px 0;
     }
 
+    /* ─── Footer ─── */
     .footer-text {
       text-align: center;
       font-size: 0.78rem;
       color: var(--text-muted);
       margin-top: 20px;
     }
-
     .footer-text a {
       color: var(--accent);
       text-decoration: none;
       font-weight: 600;
     }
-
     .footer-text a:hover { text-decoration: underline; }
 
     ::-webkit-scrollbar { width: 6px; }
@@ -254,12 +379,26 @@
 </head>
 <body>
 
+  <!-- Background decorations -->
+  <div class="bg-orb bg-orb-1" aria-hidden="true"></div>
+  <div class="bg-orb bg-orb-2" aria-hidden="true"></div>
+  <div class="bg-orb bg-orb-3" aria-hidden="true"></div>
+
   <div class="brand">
-    <svg width="86" height="86" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="30" height="30" rx="8" fill="#6c63ff"/>
-      <polyline points="8,15 12,20 22,10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-    </svg>
-    <span class="logo-text"><span class="logo-accent">Todo</span>Lander</span>
+    <div class="brand-row">
+      <svg width="38" height="38" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="logoGrad" x1="0" y1="0" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#7c6ef0"/>
+            <stop offset="100%" stop-color="#5a52d5"/>
+          </linearGradient>
+        </defs>
+        <rect width="30" height="30" rx="8" fill="url(#logoGrad)"/>
+        <polyline points="8,15 12,20 22,10" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <span class="logo-text"><span class="logo-accent">Todo</span>Lander</span>
+    </div>
+    <p class="brand-tagline">Everyday Todos</p>
   </div>
 
   <div class="card">
