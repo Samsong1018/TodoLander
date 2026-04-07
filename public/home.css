@@ -89,10 +89,20 @@ h1 {
 }
 .logo-accent { color: var(--accent); }
 
-/* Content layer */
-.app, .logo, .toolbar {
+/* Content layers */
+.logo,
+.app,
+.toolbar {
   position: relative;
+}
+
+.logo,
+.app {
   z-index: 1;
+}
+
+.toolbar {
+  z-index: 20;
 }
 
 /* ── Layout ── */
