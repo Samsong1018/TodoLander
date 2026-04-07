@@ -949,7 +949,10 @@ body.compact .todo-item { padding: 6px 10px; gap: 8px; }
   display: none;
   box-shadow: 0 8px 24px rgba(0,0,0,0.35);
 }
-.search-results.open { display: block; }
+.search-results.open { 
+  display: block; 
+  z-index: 500;
+}
 .search-result-item {
   padding: 9px 12px;
   cursor: pointer;
