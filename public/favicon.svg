@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <!-- Background pill -->
-  <rect width="32" height="32" rx="8" fill="#6c63ff"/>
+  <rect width="32" height="32" rx="8" fill="#6edf6e"/>
 
   <!-- Calendar body -->
   <rect x="4" y="9" width="24" height="18" rx="3.5" fill="#ffffff"/>
 
   <!-- Header bar -->
-  <rect x="4" y="9" width="24" height="7.5" rx="3.5" fill="#5450d4"/>
-  <rect x="4" y="13" width="24" height="3.5" fill="#5450d4"/>
+  <rect x="4" y="9" width="24" height="7.5" rx="3.5" fill="#51cf66"/>
+  <rect x="4" y="13" width="24" height="3.5" fill="#51cf66"/>
 
   <!-- Binding rings -->
   <rect x="10" y="6" width="3" height="7" rx="1.5" fill="#e2e4f0"/>
