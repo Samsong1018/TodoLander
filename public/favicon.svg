@@ -1,28 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <!-- Background pill -->
-  <rect width="32" height="32" rx="8" fill="#6c63ff"/>
+  <rect width="32" height="32" rx="8" fill="#2dd4bf"/>
 
   <!-- Calendar body -->
-  <rect x="4" y="9" width="24" height="18" rx="3.5" fill="#ffffff"/>
+  <rect x="4" y="9" width="24" height="18" rx="3.5" fill="#f0faf8"/>
 
   <!-- Header bar -->
-  <rect x="4" y="9" width="24" height="7.5" rx="3.5" fill="#5450d4"/>
-  <rect x="4" y="13" width="24" height="3.5" fill="#5450d4"/>
+  <rect x="4" y="9" width="24" height="7.5" rx="3.5" fill="#0f9688"/>
+  <rect x="4" y="13" width="24" height="3.5" fill="#0f9688"/>
 
   <!-- Binding rings -->
-  <rect x="10" y="6" width="3" height="7" rx="1.5" fill="#e2e4f0"/>
-  <rect x="19" y="6" width="3" height="7" rx="1.5" fill="#e2e4f0"/>
+  <rect x="10" y="6" width="3" height="7" rx="1.5" fill="#cfe4e0"/>
+  <rect x="19" y="6" width="3" height="7" rx="1.5" fill="#cfe4e0"/>
 
   <!-- Calendar dots (days) -->
-  <circle cx="10" cy="21" r="1.4" fill="#c4c6d4"/>
-  <circle cx="16" cy="21" r="1.4" fill="#c4c6d4"/>
-  <circle cx="22" cy="21" r="1.4" fill="#c4c6d4"/>
-  <circle cx="10" cy="25.5" r="1.4" fill="#c4c6d4"/>
-  <circle cx="16" cy="25.5" r="1.4" fill="#c4c6d4"/>
+  <circle cx="10" cy="21" r="1.4" fill="#7aa9a3"/>
+  <circle cx="16" cy="21" r="1.4" fill="#7aa9a3"/>
+  <circle cx="22" cy="21" r="1.4" fill="#7aa9a3"/>
+  <circle cx="10" cy="25.5" r="1.4" fill="#7aa9a3"/>
+  <circle cx="16" cy="25.5" r="1.4" fill="#7aa9a3"/>
 
-  <!-- Green check in bottom-right slot -->
-  <circle cx="22" cy="25.5" r="3.2" fill="#22c55e"/>
+  <!-- Teal check in bottom-right slot -->
+  <circle cx="22" cy="25.5" r="3.2" fill="#0f9688"/>
   <polyline points="19.8,25.5 21.4,27.1 24.4,23.8"
-    fill="none" stroke="white" stroke-width="1.6"
+    fill="none" stroke="#f0faf8" stroke-width="1.6"
     stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
