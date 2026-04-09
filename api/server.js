@@ -85,6 +85,9 @@ const authenticateToken = async (req, res, next) => {
     const newExpiry = new Date(Date.now() + SESSION_DURATION_MS);
     await sql`UPDATE sessions SET expires_at = ${newExpiry} WHERE token = ${token}`;
 
+    // Re-set cookie so the browser also sees the extended expiry
+    res.cookie('session', token, COOKIE_OPTS);
+
     req.user = rows[0];
     next();
 
@@ -181,7 +184,7 @@ app.post('/api/signup', async (req, res) => {
     `;
 
     res.cookie('session', token, COOKIE_OPTS);
-    res.status(201).json({ message: 'success', data: { token, expires_at } });
+    res.status(201).json({ message: 'success', data: { token, expires_at, name: name.trim(), email: email.trim() } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server Error' });
@@ -218,7 +221,7 @@ app.post('/api/login', async (req, res) => {
 
     if (existing.length > 0) {
       res.cookie('session', existing[0].token, COOKIE_OPTS);
-      return res.status(200).json({ message: 'success', data: { token: existing[0].token, expires_at: existing[0].expires_at } });
+      return res.status(200).json({ message: 'success', data: { token: existing[0].token, expires_at: existing[0].expires_at, name: user.full_name, email: user.email } });
     }
 
     const token = uuid.v4();
@@ -230,7 +233,7 @@ app.post('/api/login', async (req, res) => {
     `;
 
     res.cookie('session', token, COOKIE_OPTS);
-    res.status(201).json({ message: 'success', data: { token, expires_at } });
+    res.status(200).json({ message: 'success', data: { token, expires_at, name: user.full_name, email: user.email } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server Error' });
@@ -409,7 +412,7 @@ const NOTIFICATION_TYPES = {
       type: 'morning_digest',
       title: 'Good morning!',
       body: `You have ${count} task${count !== 1 ? 's' : ''} today.`,
-      url: '/home.html',
+      url: '/dashboard.html',
     });
   },
 
@@ -425,7 +428,7 @@ const NOTIFICATION_TYPES = {
       type: 'overdue_alert',
       title: 'Tasks need attention',
       body: `You have ${count} overdue task${count !== 1 ? 's' : ''} from previous days.`,
-      url: '/home.html',
+      url: '/dashboard.html',
     });
   },
 };
@@ -467,7 +470,7 @@ async function purgeExpiredSessions() {
 purgeExpiredSessions();
 setInterval(purgeExpiredSessions, 60 * 60 * 1000); // every hour
 
-// Keept the server alive
+// Keep the server alive
 
 setInterval(() => {
   fetch('https://dailytodo-api.onrender.com/health')

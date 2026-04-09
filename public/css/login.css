@@ -1,0 +1,237 @@
+/* ============================================
+   TODOLANDER — Login Page Styles
+   ============================================ */
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Decorative background blobs */
+.login-page::before,
+.login-page::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.15;
+}
+
+.login-page::before {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+  top: -150px;
+  right: -100px;
+}
+
+.login-page::after {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--c-blue) 0%, transparent 70%);
+  bottom: -120px;
+  left: -100px;
+}
+
+/* ── Auth Container ── */
+.auth-container {
+  width: 100%;
+  max-width: 400px;
+  animation: fadeIn 0.5s ease both;
+}
+
+/* ── Brand ── */
+.brand {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--r-lg);
+  background: transparent;
+  box-shadow: var(--neu-raised);
+  margin-bottom: 16px;
+  font-size: 1.8rem;
+}
+
+.brand-name {
+  font-family: var(--font-brand);
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.brand-name span {
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.brand-tagline {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+/* ── Auth Card ── */
+.auth-card {
+  background: var(--bg);
+  border-radius: var(--r-xl);
+  box-shadow: var(--neu-raised-lg);
+  padding: 36px 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Tab Toggle ── */
+.auth-tabs {
+  display: flex;
+  background: var(--bg);
+  box-shadow: var(--neu-inset-sm);
+  border-radius: var(--r-full);
+  padding: 5px;
+  margin-bottom: 32px;
+  gap: 4px;
+}
+
+.auth-tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--t);
+}
+
+.auth-tab.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  color: #fff;
+  box-shadow: 4px 4px 10px rgba(45, 212, 191, 0.35), -2px -2px 6px rgba(255,255,255,0.5);
+}
+
+/* ── Form Panels ── */
+.auth-panel {
+  display: none;
+}
+
+.auth-panel.active {
+  display: block;
+  animation: fadeIn 0.3s ease both;
+}
+
+/* ── Form Groups ── */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.form-input-wrapper {
+  position: relative;
+}
+
+.form-input-icon {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 1rem;
+  pointer-events: none;
+  transition: color var(--t);
+}
+
+.form-input-wrapper .neu-input {
+  padding-left: 46px;
+}
+
+.form-input-wrapper:focus-within .form-input-icon {
+  color: var(--accent);
+}
+
+/* ── Submit Button ── */
+.auth-submit {
+  width: 100%;
+  padding: 14px;
+  margin-top: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border-radius: var(--r-full);
+  border: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  color: #fff;
+  cursor: pointer;
+  box-shadow: var(--neu-accent);
+  transition: all var(--t);
+}
+
+.auth-submit:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.auth-submit:active {
+  box-shadow: inset 4px 4px 8px rgba(0,0,0,0.2);
+  transform: translateY(0);
+}
+
+/* ── Validation States ── */
+.form-input-wrapper.error .neu-input {
+  box-shadow: inset 4px 4px 8px rgba(239, 68, 68, 0.15), inset -3px -3px 6px rgba(255,255,255,0.8);
+}
+
+.form-error {
+  font-size: 0.78rem;
+  color: var(--c-red);
+  font-weight: 600;
+  margin-top: 6px;
+  padding-left: 4px;
+  display: none;
+}
+
+.form-input-wrapper.error + .form-error {
+  display: block;
+}
+
+/* Shake animation for errors */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+
+.shake {
+  animation: shake 0.4s ease;
+}
