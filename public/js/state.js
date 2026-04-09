@@ -5,12 +5,20 @@
 const API_BASE   = 'https://dailytodo-api.onrender.com';
 const SETTINGS_KEY = 'todolander_settings';
 
+function getAuthHeaders() {
+  try {
+    const user = JSON.parse(localStorage.getItem('todolander_user') || 'null');
+    return user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
+  } catch { return {}; }
+}
+
 // ── Auth ──
 
 async function signOut() {
   await fetch(`${API_BASE}/api/logout`, {
     method: 'POST',
     credentials: 'include',
+    headers: getAuthHeaders(),
   }).catch(() => {});
   localStorage.removeItem('todolander_user');
   window.location.href = 'login.html';
@@ -23,6 +31,7 @@ async function loadFromBackend() {
   try {
     res = await fetch(`${API_BASE}/api/user`, {
       credentials: 'include',
+      headers: getAuthHeaders(),
     });
   } catch (err) {
     console.error('Network error loading data:', err);
@@ -59,7 +68,7 @@ async function saveToBackend(todos, recurring, recurringState) {
     res = await fetch(`${API_BASE}/api/user`, {
       method: 'PUT',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ todos, recurring, recurringState }),
     });
   } catch (err) {
@@ -135,7 +144,7 @@ async function sendSubscriptionToServer(sub) {
   const res = await fetch(`${API_BASE}/api/push/subscribe`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify({
       subscription: sub.toJSON(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -148,7 +157,7 @@ async function removeSubscriptionFromServer(endpoint) {
   const res = await fetch(`${API_BASE}/api/push/subscribe`, {
     method: 'DELETE',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify({ endpoint }),
   });
   if (!res.ok) throw new Error(`Failed to remove push subscription (${res.status}).`);
@@ -158,7 +167,7 @@ async function saveNotifPrefs() {
   const res = await fetch(`${API_BASE}/api/push/prefs`, {
     method: 'PUT',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
     body: JSON.stringify(notifPrefs),
   });
   if (!res.ok) throw new Error(`Failed to save notification preferences (${res.status}).`);
@@ -167,6 +176,7 @@ async function saveNotifPrefs() {
 async function loadNotifPrefs() {
   const res = await fetch(`${API_BASE}/api/push/prefs`, {
     credentials: 'include',
+    headers: getAuthHeaders(),
   });
   if (res.ok) {
     const saved = await res.json();
