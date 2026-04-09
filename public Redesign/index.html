@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TodoLander</title>
   <script>
-    if (localStorage.getItem('token')) {
+    // Simple router: redirect based on auth state
+    const isLoggedIn = localStorage.getItem('todolander_auth');
+    if (isLoggedIn) {
       window.location.href = 'dashboard.html';
     } else {
       window.location.href = 'login.html';

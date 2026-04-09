@@ -1,0 +1,57 @@
+{
+  "2026-04-06": [
+    { "text": "Weekly team retrospective", "color": "#3b82f6", "done": true },
+    { "text": "Code review: auth module", "color": "#6c63ff" },
+    { "text": "Update project README", "done": true }
+  ],
+  "2026-04-07": [
+    { "text": "Morning run 🏃", "color": "#22c55e", "done": true },
+    { "text": "Fix login form validation bug", "color": "#ef4444" },
+    { "text": "Call dentist to reschedule", "color": "#f97316" },
+    { "text": "Review quarterly goals" }
+  ],
+  "2026-04-08": [
+    { "text": "Team standup at 9am", "color": "#3b82f6" },
+    { "text": "Finish dashboard UI", "color": "#6c63ff" },
+    { "text": "Buy groceries 🛒", "color": "#22c55e" },
+    { "text": "Read chapter 5 of Deep Work", "done": true },
+    { "text": "Gym session 💪", "color": "#f97316" }
+  ],
+  "2026-04-09": [
+    { "text": "Product demo prep", "color": "#ec4899" },
+    { "text": "Write unit tests for API", "color": "#3b82f6" },
+    { "text": "Coffee with Sarah at 2pm ☕", "color": "#eab308" }
+  ],
+  "2026-04-10": [
+    { "text": "Sprint planning meeting", "color": "#6c63ff" },
+    { "text": "Submit expense report", "color": "#ef4444" },
+    { "text": "Water plants 🌿", "color": "#22c55e" }
+  ],
+  "2026-04-14": [
+    { "text": "Weekly review & planning", "color": "#6c63ff" },
+    { "text": "Meal prep for the week 🥗", "color": "#22c55e" },
+    { "text": "Call mom 📱" }
+  ],
+  "2026-04-15": [
+    { "text": "Tax deadline — file returns!", "color": "#ef4444" },
+    { "text": "Dentist appointment 3pm", "color": "#f97316" }
+  ],
+  "2026-04-18": [
+    { "text": "Deploy v2.0 to production", "color": "#6c63ff" },
+    { "text": "Write release notes", "color": "#3b82f6" },
+    { "text": "Team lunch 🍕", "color": "#22c55e" }
+  ],
+  "2026-04-22": [
+    { "text": "Performance review with manager", "color": "#ec4899" },
+    { "text": "Renew gym membership", "color": "#f97316" }
+  ],
+  "2026-04-25": [
+    { "text": "Book flights for May trip ✈️", "color": "#3b82f6" },
+    { "text": "Annual health checkup", "color": "#ef4444" }
+  ],
+  "2026-04-30": [
+    { "text": "End of month reporting", "color": "#eab308" },
+    { "text": "Archive old projects", "color": "#6c63ff" },
+    { "text": "Celebrate April wins 🎉", "color": "#22c55e" }
+  ]
+}
