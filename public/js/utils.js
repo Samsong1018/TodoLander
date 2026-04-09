@@ -80,7 +80,7 @@ function importJSONData(str) {
                   : typeof item?.text === 'string' ? item.text.trim() : '';
       const color = (typeof item === 'object' && item !== null && isValidColor(item.color)) ? item.color : null;
       const done  = (typeof item === 'object' && item !== null) ? !!item.done : false;
-      return text ? { text, color, done, id: Date.now() + Math.random() } : null;
+      return text ? { text, color, done, id: Date.now() + Math.floor(Math.random() * 1000) } : null;
     }).filter(Boolean);
   }
   return result;

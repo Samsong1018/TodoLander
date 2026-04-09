@@ -6,15 +6,16 @@ A full-stack daily todo and calendar app with recurring task support, built with
 
 ## Features
 
-- **Calendar view** — navigate months, select days, see task dot indicators (green = has tasks, red = overdue)
-- **Daily todos** — add, edit, delete, reorder (drag & drop), and color-code tasks
+- **Calendar view** — navigate months, select days, see task dot indicators (with color coding and overdue highlighting)
+- **Daily todos** — add, edit, delete, and color-code tasks per day
 - **Recurring tasks** — daily, weekly, or monthly tasks that appear automatically
 - **Per-day recurring state** — mark recurring tasks done or dismissed independently each day
-- **Color labels** — 8 color options per task (red, orange, yellow, green, blue, purple, pink, none)
-- **Search** — full-text search across all tasks and dates, with highlighted matches
+- **Color labels** — 7 color options per task (red, orange, yellow, green, blue, purple, pink)
+- **Color filter** — filter the calendar and task list to show only tasks of a specific color
+- **Search** — full-text search across all tasks and dates, with highlighted matches and jump-to-date
 - **Import / Export** — JSON bulk import, JSON export, iCal (`.ics`) export
-- **Push notifications** — opt-in browser push notifications for a morning task digest and/or an overdue task alert; configurable times; requires VAPID keys on the server
-- **Settings** — dark/light mode, compact view, week start day (Sun/Mon), show/hide completed tasks
+- **Push notifications** — opt-in browser push notifications for a morning task digest and/or an overdue task alert, with configurable times; requires VAPID keys
+- **Settings** — dark/light mode, compact view, week start day (Sun/Mon), show/hide completed tasks, completed tasks at bottom
 - **Secure auth** — session-based authentication with httpOnly cookies and rate limiting
 
 ---
@@ -36,19 +37,30 @@ A full-stack daily todo and calendar app with recurring task support, built with
 
 ```
 DailyTodo/
-├── api/                    # Backend (Node.js/Express)
-│   ├── server.js           # Main server — routes, auth, middleware
-│   ├── db.js               # PostgreSQL client setup
-│   ├── .env                # Environment variables (not committed)
+├── api/                      # Backend (Node.js/Express)
+│   ├── server.js             # Main server — routes, auth, middleware, push scheduler
+│   ├── db.js                 # PostgreSQL client setup
+│   ├── .env                  # Environment variables (not committed)
 │   ├── package.json
 │   └── node_modules/
-├── public/                 # Frontend (static files served by Express)
-│   ├── index.html          # Auth page (Sign In / Sign Up)
-│   ├── home.html           # Main app page
-│   ├── home.js             # App logic (~1350 lines, vanilla JS)
-│   ├── home.css            # Styles (~1000 lines)
-│   └── favicon.svg
-├── example-tasks.json      # Sample JSON for the import feature
+├── public/                   # Frontend (static files served by Express)
+│   ├── index.html            # Entry point — redirects to login or dashboard
+│   ├── login.html            # Sign in / create account page
+│   ├── dashboard.html        # Main app page
+│   ├── sw.js                 # Service worker (push notification handling)
+│   ├── favicon.svg
+│   ├── icon-180.png
+│   ├── js/
+│   │   ├── app.js            # Main app logic (calendar, tasks, modals, notifications)
+│   │   ├── state.js          # Backend API calls, settings, push subscription helpers
+│   │   └── utils.js          # Date helpers, import/export, color constants
+│   ├── css/
+│   │   ├── neumorphism.css   # Base design system
+│   │   ├── dashboard.css     # Dashboard layout and component styles
+│   │   └── login.css         # Auth page styles
+│   └── data/
+│       └── mock-data.json    # Sample data (dev reference only)
+├── example-tasks.json        # Sample JSON for the import feature
 └── README.md
 ```
 
@@ -56,26 +68,34 @@ DailyTodo/
 
 ## Database Schema
 
-The app uses two PostgreSQL tables:
+Run the following SQL to create all required tables before starting the app:
 
 ```sql
 CREATE TABLE users (
-  id        SERIAL PRIMARY KEY,
-  email     VARCHAR(255) UNIQUE NOT NULL,
-  password  VARCHAR(128) NOT NULL,       -- bcrypt hash
-  full_name VARCHAR(100),
-  cal_data  JSONB                         -- all todo/recurring data stored here
+  id                 SERIAL PRIMARY KEY,
+  email              VARCHAR(255) UNIQUE NOT NULL,
+  password           VARCHAR(128) NOT NULL,       -- bcrypt hash
+  full_name          VARCHAR(100),
+  cal_data           JSONB,                        -- all todo/recurring data
+  notification_prefs JSONB                         -- push notification preferences
 );
 
 CREATE TABLE sessions (
   id         SERIAL PRIMARY KEY,
   user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  token      VARCHAR(36) UNIQUE NOT NULL, -- UUID v4
+  token      VARCHAR(36) UNIQUE NOT NULL,          -- UUID v4
   expires_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE push_subscriptions (
+  id           SERIAL PRIMARY KEY,
+  user_id      INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  subscription JSONB NOT NULL,                     -- Web Push subscription object
+  timezone     VARCHAR(100) DEFAULT 'UTC'
 );
 ```
 
-All calendar data (`todos`, `recurring`, `recurringState`) lives in the `cal_data` JSONB column on the user row. There is no migration system — you need to create these tables manually (see setup below).
+All calendar data (`todos`, `recurring`, `recurringState`) lives in the `cal_data` JSONB column on the user row. Push notification preferences live in `notification_prefs`. There is no migration system — create these tables manually before first run.
 
 ---
 
@@ -85,7 +105,7 @@ All calendar data (`todos`, `recurring`, `recurringState`) lives in the `cal_dat
 
 | Method | Path | Body | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/signup` | `{ name, email, password }` | Create a new account |
+| `POST` | `/api/signup` | `{ name, email, password }` | Create a new account, sets session cookie |
 | `POST` | `/api/login` | `{ email, password }` | Log in, sets session cookie |
 | `POST` | `/api/logout` | — | Destroy session, clear cookie |
 
@@ -95,6 +115,16 @@ All calendar data (`todos`, `recurring`, `recurringState`) lives in the `cal_dat
 |--------|------|-------------|
 | `GET` | `/api/user` | Fetch current user's calendar data |
 | `PUT` | `/api/user` | Save calendar data (full replace) |
+
+### Push notification endpoints (require auth cookie)
+
+| Method | Path | Body | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/push/vapid-key` | — | Returns the VAPID public key |
+| `POST` | `/api/push/subscribe` | `{ subscription, timezone }` | Register a push subscription |
+| `DELETE` | `/api/push/subscribe` | `{ endpoint }` | Remove a push subscription |
+| `GET` | `/api/push/prefs` | — | Fetch notification preferences |
+| `PUT` | `/api/push/prefs` | `{ morning_digest, overdue_alert }` | Save notification preferences |
 
 ### Health
 
@@ -108,12 +138,12 @@ All calendar data (`todos`, `recurring`, `recurringState`) lives in the `cal_dat
 {
   "todos": {
     "2026-03-15": [
-      { "id": 1, "text": "Buy groceries", "done": false, "color": "#22c55e" }
+      { "id": 1712345678901, "text": "Buy groceries", "done": false, "color": "#22c55e" }
     ]
   },
   "recurring": [
     {
-      "id": "uuid-here",
+      "id": "1712345678901",
       "text": "Morning workout",
       "frequency": "daily",
       "startDate": "2026-03-01",
@@ -122,7 +152,7 @@ All calendar data (`todos`, `recurring`, `recurringState`) lives in the `cal_dat
   ],
   "recurringState": {
     "2026-03-15": {
-      "uuid-here": { "done": true, "dismissed": false }
+      "1712345678901": { "done": true, "dismissed": false }
     }
   }
 }
@@ -147,24 +177,7 @@ cd DailyTodo
 
 ### 2. Create the database tables
 
-Connect to your PostgreSQL database and run:
-
-```sql
-CREATE TABLE users (
-  id        SERIAL PRIMARY KEY,
-  email     VARCHAR(255) UNIQUE NOT NULL,
-  password  VARCHAR(128) NOT NULL,
-  full_name VARCHAR(100),
-  cal_data  JSONB
-);
-
-CREATE TABLE sessions (
-  id         SERIAL PRIMARY KEY,
-  user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  token      VARCHAR(36) UNIQUE NOT NULL,
-  expires_at TIMESTAMP NOT NULL
-);
-```
+Connect to your PostgreSQL database and run the schema SQL from the [Database Schema](#database-schema) section above.
 
 ### 3. Set up environment variables
 
@@ -182,11 +195,11 @@ PORT=3000
 DATABASE_URL=postgresql://postgres:yourpassword@localhost:5432/dailytodo
 ```
 
-If you're using a local database without SSL, you'll also need to remove `ssl: 'require'` from `api/db.js`:
+If you're using a local database without SSL, remove the `ssl: 'require'` option from `api/db.js`:
 
 ```js
-// api/db.js — change this line for local dev without SSL:
-const sql = postgres(process.env.DATABASE_URL);   // remove { ssl: 'require' }
+// api/db.js — for local dev without SSL:
+const sql = postgres(process.env.DATABASE_URL);
 ```
 
 ### 4. Install dependencies
@@ -196,28 +209,27 @@ cd api
 npm install
 ```
 
-### 5. Start the dev server
+### 5. Point the frontend at localhost
+
+The frontend API base URL is defined at the top of `public/js/state.js`:
+
+```js
+const API_BASE = 'https://dailytodo-api.onrender.com';
+```
+
+For local development, change it to an empty string (uses relative paths, so the Express server serves both API and frontend on the same port):
+
+```js
+const API_BASE = '';
+```
+
+### 6. Start the dev server
 
 ```bash
 npm run dev
 ```
 
-This starts the server with `nodemon` for auto-reload on file changes.
-
-Visit **http://localhost:3000** in your browser.
-
-> The Express server serves the frontend static files from `../public/`, so both the API and the UI run on the same port.
-
-### 6. (Optional) Point the frontend at localhost
-
-The frontend HTML files (`public/index.html`) hardcode the production API URL (`https://dailytodo-api.onrender.com`). For local development, update the fetch calls in `index.html` to use a relative path or `http://localhost:3000`:
-
-```js
-// In public/index.html, change:
-const res = await fetch('https://dailytodo-api.onrender.com/api/login', ...)
-// To:
-const res = await fetch('/api/login', ...)
-```
+This starts the server with `nodemon` for auto-reload on file changes. Visit **http://localhost:3000** in your browser.
 
 ---
 
@@ -227,9 +239,16 @@ const res = await fetch('/api/login', ...)
 |----------|----------|-------------|
 | `PORT` | No | Port the server listens on (default: `3000`) |
 | `DATABASE_URL` | Yes | Full PostgreSQL connection string |
-| `VAPID_PUBLIC_KEY` | For push notifications | VAPID public key (generate with `npx web-push generate-vapid-keys`) |
+| `VAPID_PUBLIC_KEY` | For push notifications | VAPID public key |
 | `VAPID_PRIVATE_KEY` | For push notifications | VAPID private key |
-| `VAPID_SUBJECT` | For push notifications | `mailto:` address or URL identifying the push sender |
+| `VAPID_EMAIL` | For push notifications | Sender identity, e.g. `mailto:you@example.com` |
+| `NODE_ENV` | For production | Set to `production` to enable secure/SameSite=None cookies |
+
+To generate VAPID keys:
+
+```bash
+npx web-push generate-vapid-keys
+```
 
 ---
 
@@ -239,7 +258,7 @@ const res = await fetch('/api/login', ...)
 - **Sessions** stored server-side in PostgreSQL; tokens are UUIDs in httpOnly cookies
 - **Session expiry** — 24 hours, sliding window (extended on each authenticated request)
 - **Expired sessions** purged automatically every hour
-- **Rate limiting** on `/api/login` and `/api/signup` (5 requests per 15 minutes)
+- **Rate limiting** on `/api/login` and `/api/signup` (5 requests per 15 minutes per IP)
 - **Helmet** middleware sets secure HTTP headers
 - **CORS** restricted to known frontend origins in production
 
@@ -249,24 +268,23 @@ const res = await fetch('/api/login', ...)
 
 ### JSON Import
 
-Click the **Import JSON** button in the toolbar and select a `.json` file. The file must be an object where keys are dates (`YYYY-MM-DD`) and values are arrays of task strings or objects:
+Click the **Import** button in the toolbar and select a `.json` file. The file must be an object where keys are dates (`YYYY-MM-DD`) and values are arrays of task strings or objects:
 
 ```json
 {
   "2026-03-15": ["Buy milk", "Call the bank"],
   "2026-03-16": [
     { "text": "Team standup" },
-    { "text": "Review PR", "done": true }
+    { "text": "Review PR", "done": true, "color": "#3b82f6" }
   ]
 }
 ```
 
 - Plain strings and objects with a `text` field are both accepted
 - Duplicate tasks (same text on the same day) are skipped automatically
-- Entries with an invalid date key or non-array value are skipped with a warning count
-- Click the **ⓘ** button next to Import for an in-app format reference
+- Entries with an invalid date key or non-array value are skipped
 
-See `example-tasks.json` in the repo root for a full example.
+Click the **ⓘ** button in the toolbar for an in-app format reference. See `example-tasks.json` in the repo root for a full example.
 
 ### JSON Export
 
@@ -274,38 +292,46 @@ Downloads your full todo dataset as a `.json` file.
 
 ### iCal Export
 
-Downloads a `.ics` calendar file compatible with Apple Calendar, Google Calendar, Outlook, and other calendar apps. Recurring tasks are exported with proper `RRULE` entries.
+Downloads a `.ics` calendar file compatible with Apple Calendar, Google Calendar, Outlook, and other apps. Recurring tasks are exported with proper `RRULE` entries.
+
+#### Supported colors
+
+| Hex | Name |
+|-----|------|
+| `#ef4444` | Red |
+| `#f97316` | Orange |
+| `#eab308` | Yellow |
+| `#22c55e` | Green |
+| `#3b82f6` | Blue |
+| `#6c63ff` | Purple |
+| `#ec4899` | Pink |
 
 ---
 
 ## Push Notifications
 
-Push notifications are opt-in and require browser notification permission. The notifications section appears automatically in Settings if the browser supports the Push API. Two notification types are available:
+Push notifications are opt-in and require browser notification permission plus VAPID keys set in your environment. If the VAPID keys are not configured, the notifications section is hidden in the UI.
+
+Two notification types are available:
 
 | Notification | Default time | Description |
 |---|---|---|
-| **Morning task reminder** | 08:00 | Sends a digest of today's pending tasks each morning |
-| **Overdue task alert** | 18:00 | Alerts you if there are incomplete tasks from previous days |
+| **Morning digest** | 08:00 | Count of today's pending tasks |
+| **Overdue alert** | 18:00 | Count of incomplete tasks from previous days |
 
-### Server-side requirements
-
-Push notifications require additional environment variables and a running service worker. You'll need to generate a VAPID key pair and expose a `/api/push/vapid-key` endpoint. The backend must also handle push subscription registration and schedule/send notifications via the Web Push protocol.
-
-If `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` are not set, the notifications section is hidden in the UI.
+Times are configurable per user and respect the user's local timezone (captured at subscription time). The server checks subscriptions every 15 minutes and fires notifications within the matching 15-minute window.
 
 ---
 
 ## Deployment
 
-The app is deployed on [Render.com](https://render.com):
-
-- **Backend + frontend**: single Express service serving static files from `public/`
-- **Database**: [Neon](https://neon.tech) serverless PostgreSQL
-- A keep-alive ping hits `/health` every 14 minutes to prevent the Render free-tier instance from spinning down
+The app is deployed on [Render.com](https://render.com) as a single Express service serving both the API and static frontend files from `public/`.
 
 To deploy your own instance:
 
-1. Create a Neon (or any PostgreSQL) database and run the schema SQL above.
-2. Create a new **Web Service** on Render pointed at the `api/` directory.
-3. Set the `DATABASE_URL` environment variable in Render's dashboard.
-4. Update the hardcoded API URLs in `public/index.html` and `public/home.js` to match your Render service URL.
+1. Create a PostgreSQL database (e.g. [Neon](https://neon.tech)) and run the schema SQL.
+2. Create a new **Web Service** on Render pointed at the `api/` directory with start command `node server.js`.
+3. Set all required environment variables in Render's dashboard (`DATABASE_URL`, `NODE_ENV=production`, and optionally the VAPID keys).
+4. Update `API_BASE` in `public/js/state.js` to your Render service URL.
+
+A keep-alive ping hits `/health` every 14 minutes to prevent the Render free-tier instance from spinning down.

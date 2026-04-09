@@ -60,6 +60,11 @@ async function init() {
 
 function save() {
   saveToBackend(todos, recurring, recurringState).catch(err => {
+    if (err.message && err.message.includes('session has expired')) {
+      localStorage.removeItem('todolander_user');
+      window.location.href = 'login.html';
+      return;
+    }
     showToast(err.message || 'Changes could not be saved.', 'var(--c-red)');
   });
 }
@@ -106,6 +111,7 @@ function dismissOverdueAlert() {
 // ══════════════════════════════════════════
 
 function doesRecurOn(task, dateStr) {
+  if (!task.startDate) return false;
   const [ty, tm, td] = task.startDate.split('-').map(Number);
   const [dy, dm, dd] = dateStr.split('-').map(Number);
   const start = new Date(ty, tm - 1, td);
@@ -220,9 +226,14 @@ function renderCalDay(dateStr, dayNum, otherMonth) {
     isOverdue && !otherMonth ? 'overdue' : '',
   ].filter(Boolean).join(' ');
 
+  const applicableRecurring = getApplicableRecurring(dateStr);
+  const allTasks = [
+    ...(todos[dateStr] || []),
+    ...applicableRecurring.map(t => ({ color: t.color })),
+  ];
   const taskList = activeColorFilter
-    ? (todos[dateStr] || []).filter(t => (t.color ?? null) === activeColorFilter)
-    : (todos[dateStr] || []);
+    ? allTasks.filter(t => (t.color ?? null) === activeColorFilter)
+    : allTasks;
   const colors = [...new Set(taskList.slice(0, 6).map(t => t.color || 'var(--text-muted)'))].slice(0, 4);
   const dots   = colors.map(c => `<span class="cal-dot" style="background:${c}"></span>`).join('');
   const dotsHtml = filtered
@@ -850,6 +861,13 @@ function updateNotifUI() {
 
 async function initNotifications() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  let vapidKey;
+  try {
+    vapidKey = await getVapidKey();
+  } catch {
+    return;
+  }
+  if (!vapidKey) return;
   try {
     await navigator.serviceWorker.register('/sw.js');
   } catch {

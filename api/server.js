@@ -233,7 +233,7 @@ app.post('/api/login', async (req, res) => {
     `;
 
     res.cookie('session', token, COOKIE_OPTS);
-    res.status(201).json({ message: 'success', data: { token, expires_at, name: user.full_name, email: user.email } });
+    res.status(200).json({ message: 'success', data: { token, expires_at, name: user.full_name, email: user.email } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server Error' });
@@ -470,7 +470,7 @@ async function purgeExpiredSessions() {
 purgeExpiredSessions();
 setInterval(purgeExpiredSessions, 60 * 60 * 1000); // every hour
 
-// Keept the server alive
+// Keep the server alive
 
 setInterval(() => {
   fetch('https://dailytodo-api.onrender.com/health')
