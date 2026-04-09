@@ -7,10 +7,10 @@ self.addEventListener('push', event => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: 'TodoLander', body: event.data.text(), url: '/home.html' };
+    payload = { title: 'TodoLander', body: event.data.text(), url: '/dashboard.html' };
   }
 
-  const { title = 'TodoLander', body = '', url = '/home.html' } = payload;
+  const { title = 'TodoLander', body = '', url = '/dashboard.html' } = payload;
 
   event.waitUntil(
     self.registration.showNotification(title, {
@@ -26,7 +26,7 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const url = event.notification.data?.url || '/home.html';
+  const url = event.notification.data?.url || '/dashboard.html';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       // Focus existing tab if already open

@@ -139,8 +139,7 @@
         });
         const data = await res.json();
         if (res.ok) {
-          localStorage.setItem('token', data.data.token);
-          localStorage.setItem('todolander_user', JSON.stringify({ email, name: email.split('@')[0] }));
+          localStorage.setItem('todolander_user', JSON.stringify({ email, name: data.data.name || email.split('@')[0] }));
           window.location.href = 'dashboard.html';
         } else {
           setApiError('loginApiError', data.error || 'Sign in failed.');
@@ -181,8 +180,7 @@
         });
         const data = await res.json();
         if (res.ok) {
-          localStorage.setItem('token', data.data.token);
-          localStorage.setItem('todolander_user', JSON.stringify({ email, name }));
+          localStorage.setItem('todolander_user', JSON.stringify({ email, name: data.data.name || name }));
           window.location.href = 'dashboard.html';
         } else {
           setApiError('regApiError', data.error || 'Sign up failed.');

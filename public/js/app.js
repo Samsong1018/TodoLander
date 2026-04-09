@@ -22,7 +22,20 @@ async function init() {
   appSettings = loadSettings();
   applySettings(appSettings);
 
-  const data = await loadFromBackend();
+  let data;
+  try {
+    data = await loadFromBackend();
+  } catch (err) {
+    document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;color:var(--text-muted,#999);text-align:center;padding:20px">
+        <div>
+          <p style="font-size:1.1rem;margin-bottom:8px">Failed to load your data.</p>
+          <p style="font-size:0.85rem;opacity:0.7">${escapeHtml(err.message)}</p>
+          <button onclick="location.reload()" style="margin-top:16px;padding:8px 16px;cursor:pointer;border-radius:8px">Retry</button>
+        </div>
+      </div>`;
+    return;
+  }
   if (!data) return; // redirected to login
 
   todos          = data.todos;
@@ -310,7 +323,10 @@ function renderTasks() {
   });
 
   if (!html) {
-    container.innerHTML = `<div class="tasks-empty"><div class="tasks-empty-icon">✅</div><p>All tasks complete.</p></div>`;
+    const noVisibleFromFilter = dayTodos.length + dayRecur.length === 0;
+    container.innerHTML = noVisibleFromFilter
+      ? `<div class="tasks-empty"><div class="tasks-empty-icon">🔍</div><p>No matching tasks.</p></div>`
+      : `<div class="tasks-empty"><div class="tasks-empty-icon">✅</div><p>All tasks complete.</p></div>`;
     return;
   }
 
@@ -583,13 +599,25 @@ function confirmDeleteAll() { openModal('confirmModal'); }
 
 function executeDeleteAll() {
   if (activeColorFilter !== null) {
-    // Delete only tasks matching the active color filter
+    // Remove matching one-off todos
     for (const key of Object.keys(todos)) {
       todos[key] = todos[key].filter(t => (t.color ?? null) !== activeColorFilter);
       if (todos[key].length === 0) delete todos[key];
     }
+    // Remove matching recurring tasks and clean up their state entries
+    const removedIds = new Set(
+      recurring.filter(t => (t.color ?? null) === activeColorFilter).map(t => t.id)
+    );
+    recurring = recurring.filter(t => (t.color ?? null) !== activeColorFilter);
+    for (const dateStr of Object.keys(recurringState)) {
+      for (const id of removedIds) {
+        delete recurringState[dateStr][id];
+      }
+    }
   } else {
     todos = {};
+    recurring = [];
+    recurringState = {};
   }
   save();
   renderAll();
@@ -602,7 +630,6 @@ function executeDeleteAll() {
 function importTasks() {
   triggerFileUpload('.json', (content, filename) => {
     try {
-      const raw = JSON.parse(content);
       const imported = importJSONData(content);
       let count = 0;
       for (const [dateStr, list] of Object.entries(imported)) {

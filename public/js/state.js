@@ -3,46 +3,49 @@
    ============================================ */
 
 const API_BASE   = 'https://dailytodo-api.onrender.com';
-const TOKEN_KEY  = 'token';
 const SETTINGS_KEY = 'todolander_settings';
 
 // ── Auth ──
 
-function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
 async function signOut() {
-  const token = getToken();
-  if (token) {
-    await fetch(`${API_BASE}/api/logout`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Authorization': `Bearer ${token}` },
-    }).catch(() => {});
-  }
-  localStorage.removeItem(TOKEN_KEY);
+  await fetch(`${API_BASE}/api/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  }).catch(() => {});
+  localStorage.removeItem('todolander_user');
   window.location.href = 'login.html';
 }
 
 // ── Backend load / save ──
 
 async function loadFromBackend() {
-  const token = getToken();
-  if (!token) { window.location.href = 'login.html'; return null; }
-
-  const res = await fetch(`${API_BASE}/api/user`, {
-    credentials: 'include',
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/api/user`, {
+      credentials: 'include',
+    });
+  } catch (err) {
+    console.error('Network error loading data:', err);
+    throw new Error('Network error. Please check your connection and try again.');
+  }
 
   if (res.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('todolander_user');
     window.location.href = 'login.html';
     return null;
   }
 
-  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`Server error (${res.status}). Please try again later.`);
+  }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error('Unexpected server response. Please try again later.');
+  }
+
   return {
     todos:          data.todos          || {},
     recurring:      data.recurring      || [],
@@ -51,16 +54,11 @@ async function loadFromBackend() {
 }
 
 async function saveToBackend(todos, recurring, recurringState) {
-  const token = getToken();
-  if (!token) return;
   try {
     await fetch(`${API_BASE}/api/user`, {
       method: 'PUT',
       credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ todos, recurring, recurringState }),
     });
   } catch (err) {
@@ -127,11 +125,10 @@ async function subscribeToPush() {
 }
 
 async function sendSubscriptionToServer(sub) {
-  const token = getToken();
   await fetch(`${API_BASE}/api/push/subscribe`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       subscription: sub.toJSON(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -140,30 +137,26 @@ async function sendSubscriptionToServer(sub) {
 }
 
 async function removeSubscriptionFromServer(endpoint) {
-  const token = getToken();
   await fetch(`${API_BASE}/api/push/subscribe`, {
     method: 'DELETE',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ endpoint }),
   });
 }
 
 async function saveNotifPrefs() {
-  const token = getToken();
   await fetch(`${API_BASE}/api/push/prefs`, {
     method: 'PUT',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(notifPrefs),
   });
 }
 
 async function loadNotifPrefs() {
-  const token = getToken();
   const res = await fetch(`${API_BASE}/api/push/prefs`, {
     credentials: 'include',
-    headers: { 'Authorization': `Bearer ${token}` },
   });
   if (res.ok) {
     const saved = await res.json();
