@@ -59,7 +59,9 @@ async function init() {
 }
 
 function save() {
-  saveToBackend(todos, recurring, recurringState);
+  saveToBackend(todos, recurring, recurringState).catch(err => {
+    showToast(err.message || 'Changes could not be saved.', 'var(--c-red)');
+  });
 }
 
 function renderAll() {
@@ -75,8 +77,10 @@ function renderAll() {
 function updateSetting(key, value) {
   appSettings[key] = value;
   saveSettings(appSettings);
-  if (key === 'theme') applySettings(appSettings);
-  if (key === 'compact') applySettings(appSettings);
+  applySettings(appSettings);
+  if (key === 'weekStartsMonday' || key === 'showCompleted' || key === 'completedAtBottom') {
+    renderAll();
+  }
 }
 
 function syncSettingsUI() {

@@ -85,6 +85,9 @@ const authenticateToken = async (req, res, next) => {
     const newExpiry = new Date(Date.now() + SESSION_DURATION_MS);
     await sql`UPDATE sessions SET expires_at = ${newExpiry} WHERE token = ${token}`;
 
+    // Re-set cookie so the browser also sees the extended expiry
+    res.cookie('session', token, COOKIE_OPTS);
+
     req.user = rows[0];
     next();
 

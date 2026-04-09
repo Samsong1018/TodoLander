@@ -54,15 +54,22 @@ async function loadFromBackend() {
 }
 
 async function saveToBackend(todos, recurring, recurringState) {
+  let res;
   try {
-    await fetch(`${API_BASE}/api/user`, {
+    res = await fetch(`${API_BASE}/api/user`, {
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ todos, recurring, recurringState }),
     });
   } catch (err) {
-    console.error('Failed to save:', err);
+    throw new Error('Network error – changes could not be saved. Please check your connection.');
+  }
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error('Your session has expired. Please log in again.');
+    }
+    throw new Error(`Save failed (${res.status}). Please try again.`);
   }
 }
 
@@ -125,7 +132,7 @@ async function subscribeToPush() {
 }
 
 async function sendSubscriptionToServer(sub) {
-  await fetch(`${API_BASE}/api/push/subscribe`, {
+  const res = await fetch(`${API_BASE}/api/push/subscribe`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -134,24 +141,27 @@ async function sendSubscriptionToServer(sub) {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }),
   });
+  if (!res.ok) throw new Error(`Failed to save push subscription (${res.status}).`);
 }
 
 async function removeSubscriptionFromServer(endpoint) {
-  await fetch(`${API_BASE}/api/push/subscribe`, {
+  const res = await fetch(`${API_BASE}/api/push/subscribe`, {
     method: 'DELETE',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ endpoint }),
   });
+  if (!res.ok) throw new Error(`Failed to remove push subscription (${res.status}).`);
 }
 
 async function saveNotifPrefs() {
-  await fetch(`${API_BASE}/api/push/prefs`, {
+  const res = await fetch(`${API_BASE}/api/push/prefs`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(notifPrefs),
   });
+  if (!res.ok) throw new Error(`Failed to save notification preferences (${res.status}).`);
 }
 
 async function loadNotifPrefs() {

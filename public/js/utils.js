@@ -96,6 +96,12 @@ function buildExportJSON(todos) {
   return JSON.stringify(out, null, 2);
 }
 
+function nextDayCompact(isoDate) {
+  const d = new Date(isoDate + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10).replace(/-/g, '');
+}
+
 function buildExportICal(todos, recurring) {
   const esc = s => s.replace(/\\/g,'\\\\').replace(/,/g,'\\,').replace(/;/g,'\\;').replace(/\n/g,'\\n');
   const lines = [
@@ -108,11 +114,12 @@ function buildExportICal(todos, recurring) {
 
   for (const [dateStr, list] of Object.entries(todos)) {
     const d = dateStr.replace(/-/g, '');
+    const dEnd = nextDayCompact(dateStr);
     for (const todo of list) {
       lines.push('BEGIN:VEVENT');
       lines.push(`UID:${todo.id || Date.now()}@todolander`);
       lines.push(`DTSTART;VALUE=DATE:${d}`);
-      lines.push(`DTEND;VALUE=DATE:${d}`);
+      lines.push(`DTEND;VALUE=DATE:${dEnd}`);
       lines.push(`SUMMARY:${esc(todo.text)}`);
       if (todo.done) lines.push('STATUS:COMPLETED');
       lines.push('END:VEVENT');
@@ -121,13 +128,14 @@ function buildExportICal(todos, recurring) {
 
   for (const task of (recurring || [])) {
     const d = task.startDate.replace(/-/g, '');
+    const dEnd = nextDayCompact(task.startDate);
     const rrule = task.frequency === 'daily'  ? 'RRULE:FREQ=DAILY'
                 : task.frequency === 'weekly' ? 'RRULE:FREQ=WEEKLY'
                 : 'RRULE:FREQ=MONTHLY';
     lines.push('BEGIN:VEVENT');
     lines.push(`UID:${task.id}@todolander-recur`);
     lines.push(`DTSTART;VALUE=DATE:${d}`);
-    lines.push(`DTEND;VALUE=DATE:${d}`);
+    lines.push(`DTEND;VALUE=DATE:${dEnd}`);
     lines.push(rrule);
     lines.push(`SUMMARY:${esc(task.text)}`);
     lines.push('END:VEVENT');
