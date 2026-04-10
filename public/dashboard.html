@@ -66,6 +66,17 @@
         👋 Sign Out
       </button>
 
+      <!-- Mobile-only: collapsed ⋮ menu -->
+      <button class="header-btn mobile-menu-btn" id="mobileMenuBtn"
+        onclick="toggleMobileMenu()" title="Menu" aria-label="Menu">⋮</button>
+      <div class="mobile-menu-dropdown" id="mobileMenuDropdown">
+        <button class="mobile-menu-item" onclick="importTasks();closeMobileMenu()">📥 Import</button>
+        <button class="mobile-menu-item" onclick="openExportModal();closeMobileMenu()">📤 Export</button>
+        <button class="mobile-menu-item" onclick="openModal('infoModal');closeMobileMenu()">ℹ️ JSON Info</button>
+        <button class="mobile-menu-item" onclick="openModal('settingsModal');closeMobileMenu()">⚙️ Settings</button>
+        <button class="mobile-menu-item danger" onclick="signOut()">👋 Sign Out</button>
+      </div>
+
     </div>
   </header>
 
@@ -392,23 +403,6 @@
             onchange="saveNotifTime('morning_digest', this.value)">
         </div>
 
-        <!-- Overdue Alert -->
-        <div class="settings-row">
-          <div class="settings-row-info">
-            <span class="settings-label">🌙 Overdue Alert</span>
-            <span class="settings-hint">Evening alert for any unfinished tasks</span>
-          </div>
-          <label class="neu-toggle">
-            <input type="checkbox" id="overdueAlertToggle"
-              onchange="handleNotifToggle('overdue_alert', this.checked)">
-            <span class="neu-toggle-track"><span class="neu-toggle-thumb"></span></span>
-          </label>
-        </div>
-        <div class="settings-sub-row" id="overdueTimeRow" style="display:none">
-          <span class="settings-sub-label">Alert time</span>
-          <input type="time" id="overdueTimeInput" class="settings-time-input" value="18:00"
-            onchange="saveNotifTime('overdue_alert', this.value)">
-        </div>
       </div>
 
       <div class="modal-actions">
@@ -416,16 +410,6 @@
         <button class="neu-btn neu-btn-accent" onclick="closeModal('settingsModal')">Done</button>
       </div>
     </div>
-  </div>
-
-  <!-- Overdue Alert Bar -->
-  <div class="overdue-alert-bar hidden" id="overdueAlertBar">
-    <div class="overdue-alert-icon">⚠️</div>
-    <div class="overdue-alert-body">
-      <div class="overdue-alert-title">Overdue Tasks</div>
-      <div class="overdue-alert-msg"></div>
-    </div>
-    <button class="overdue-alert-close" onclick="dismissOverdueAlert()" title="Dismiss">✕</button>
   </div>
 
   <!-- Toast Container -->

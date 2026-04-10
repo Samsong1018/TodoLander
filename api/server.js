@@ -294,34 +294,6 @@ function countTasksForDate(calData, dateStr) {
   return todos.length + recurring.length;
 }
 
-// Count incomplete tasks on dates strictly before today (overdue)
-function countOverdueTasks(calData, todayStr) {
-  let count = 0;
-  for (const [dateStr, todos] of Object.entries(calData?.todos || {})) {
-    if (dateStr >= todayStr) continue;
-    count += todos.filter(t => !t.done).length;
-  }
-  // overdue recurring: dates before today with undismissed, undone instances
-  for (const task of (calData?.recurring || [])) {
-    const startStr = task.startDate || task.start_date;
-    if (!startStr) continue;
-    const [ty, tm, td] = startStr.split('-').map(Number);
-    const taskStart = new Date(ty, tm - 1, td);
-    const [dy, dm, dd] = todayStr.split('-').map(Number);
-    const today = new Date(dy, dm - 1, dd);
-    // Only look at dates up to 30 days back to avoid excessive iteration
-    for (let i = 1; i <= 30; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      if (d < taskStart) break;
-      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      if (!doesRecurOn(task, key)) continue;
-      const ds = calData?.recurringState?.[key] || {};
-      if (!ds[task.id]?.dismissed && !ds[task.id]?.done) count++;
-    }
-  }
-  return count;
-}
 
 async function sendPushToUser(subscription, payload) {
   try {
@@ -409,7 +381,7 @@ app.put('/api/push/prefs', (req, res) => {
     if (!prefs || typeof prefs !== 'object' || Array.isArray(prefs)) {
       return res.status(400).json({ error: 'Invalid preferences format.' });
     }
-    const ALLOWED_PREF_KEYS = new Set(['morning_digest', 'overdue_alert']);
+    const ALLOWED_PREF_KEYS = new Set(['morning_digest']);
     for (const key of Object.keys(prefs)) {
       if (!ALLOWED_PREF_KEYS.has(key)) {
         return res.status(400).json({ error: `Unknown preference key: ${key}` });
@@ -473,21 +445,6 @@ const NOTIFICATION_TYPES = {
     });
   },
 
-  overdue_alert: async (_userId, calData, prefs, subscription) => {
-    const p = prefs.overdue_alert;
-    if (!p?.enabled) return;
-    const { hh, mm, dateStr } = getLocalTimeAndDate(subscription.timezone);
-    const [ph, pm] = (p.time || '18:00').split(':').map(Number);
-    if (hh !== ph || mm < pm || mm >= pm + 15) return;
-    const count = countOverdueTasks(calData, dateStr);
-    if (count === 0) return;
-    await sendPushToUser(subscription.subscription, {
-      type: 'overdue_alert',
-      title: 'Tasks need attention',
-      body: `You have ${count} overdue task${count !== 1 ? 's' : ''} from previous days.`,
-      url: '/dashboard.html',
-    });
-  },
 };
 
 async function runNotificationScheduler() {

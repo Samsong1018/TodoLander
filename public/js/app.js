@@ -102,10 +102,6 @@ function syncSettingsUI() {
   }
 }
 
-function dismissOverdueAlert() {
-  document.getElementById('overdueAlertBar')?.classList.add('hidden');
-}
-
 // ══════════════════════════════════════════
 // RECURRING HELPERS
 // ══════════════════════════════════════════
@@ -147,20 +143,6 @@ function hasTasksOfColor(dateStr, color) {
     if (!doesRecurOn(t, dateStr)) return false;
     const ds = recurringState[dateStr] || {};
     return !ds[t.id]?.dismissed;
-  });
-}
-
-function hasPastIncomplete(dateStr) {
-  const date = parseDate(dateStr);
-  const todayMidnight = new Date();
-  todayMidnight.setHours(0, 0, 0, 0);
-  if (date >= todayMidnight) return false;
-  if ((todos[dateStr] || []).some(t => !t.done)) return true;
-  return recurring.some(t => {
-    if (!doesRecurOn(t, dateStr)) return false;
-    const ds = recurringState[dateStr] || {};
-    if (ds[t.id]?.dismissed) return false;
-    return !ds[t.id]?.done;
   });
 }
 
@@ -215,7 +197,6 @@ function renderCalDay(dateStr, dayNum, otherMonth) {
   const filtered = activeColorFilter
     ? hasTasksOfColor(dateStr, activeColorFilter)
     : hasTasks(dateStr);
-  const isOverdue  = hasPastIncomplete(dateStr);
   const isToday    = dateStr === todayStr();
   const isSelected = dateStr === selectedDate;
 
@@ -223,7 +204,6 @@ function renderCalDay(dateStr, dayNum, otherMonth) {
     otherMonth  ? 'other-month' : '',
     isToday     ? 'today'       : '',
     isSelected  ? 'selected'    : '',
-    isOverdue && !otherMonth ? 'overdue' : '',
   ].filter(Boolean).join(' ');
 
   const applicableRecurring = getApplicableRecurring(dateStr);
@@ -361,6 +341,7 @@ function renderTodoItem(todo, idx) {
       <span class="task-text" ondblclick="startEditTodo('${todo.id}', this)">${escapeHtml(todo.text)}</span>
       <div class="task-meta"></div>
       <div class="task-actions">
+        <button class="task-action-btn" onclick="showTaskColorPicker('${todo.id}','todo',this)" title="Color">🎨</button>
         <button class="task-action-btn" onclick="startEditTodo('${todo.id}')" title="Edit">✏️</button>
         <button class="task-action-btn delete" onclick="deleteTodo('${todo.id}')" title="Delete">🗑️</button>
       </div>
@@ -382,6 +363,7 @@ function renderRecurItem(task, dateStr) {
       <span class="task-repeat-badge">${freqLabel}</span>
       <div class="task-meta"></div>
       <div class="task-actions">
+        <button class="task-action-btn" onclick="showTaskColorPicker('${task.id}','recur',this)" title="Color">🎨</button>
         <button class="task-action-btn" onclick="showRecurDeleteOptions('${task.id}', '${dateStr}', this)" title="Delete">🗑️</button>
       </div>
     </div>`;
@@ -540,6 +522,58 @@ function clearAddColor(el) {
   selectedAddColor = null;
   document.querySelectorAll('.add-color-swatch, .add-color-none').forEach(s => s.classList.remove('active'));
   el.classList.add('active');
+}
+
+// ── Task Color Picker ──
+
+function showTaskColorPicker(id, type, btn) {
+  document.querySelectorAll('.task-color-picker').forEach(p => p.remove());
+
+  const currentColor = type === 'todo'
+    ? (todos[selectedDate]?.find(t => t.id == id)?.color || null)
+    : (recurring.find(t => t.id === id)?.color || null);
+
+  const picker = document.createElement('div');
+  picker.className = 'task-color-picker';
+
+  const noneBtn = document.createElement('span');
+  noneBtn.className = 'task-picker-none' + (currentColor === null ? ' active' : '');
+  noneBtn.title = 'No color';
+  noneBtn.textContent = '✕';
+  noneBtn.onclick = e => { e.stopPropagation(); applyTaskColor(id, type, null); picker.remove(); };
+  picker.appendChild(noneBtn);
+
+  VALID_COLORS.forEach(c => {
+    const sw = document.createElement('span');
+    sw.className = 'task-picker-swatch' + (currentColor === c ? ' active' : '');
+    sw.style.background = c;
+    sw.title = COLOR_NAMES[c] || c;
+    sw.onclick = e => { e.stopPropagation(); applyTaskColor(id, type, c); picker.remove(); };
+    picker.appendChild(sw);
+  });
+
+  const rect = btn.getBoundingClientRect();
+  picker.style.top   = (rect.bottom + 6) + 'px';
+  picker.style.right = (document.documentElement.clientWidth - rect.right) + 'px';
+  document.body.appendChild(picker);
+
+  const closeHandler = e => {
+    if (!picker.contains(e.target) && e.target !== btn) {
+      picker.remove();
+      document.removeEventListener('click', closeHandler);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeHandler), 0);
+}
+
+function applyTaskColor(id, type, color) {
+  if (type === 'todo') {
+    const task = todos[selectedDate]?.find(t => t.id == id);
+    if (task) { task.color = color; save(); renderAll(); }
+  } else {
+    const task = recurring.find(t => t.id === id);
+    if (task) { task.color = color; save(); renderAll(); }
+  }
 }
 
 // ── Progress ──
@@ -760,6 +794,16 @@ function jumpToDate(dateStr) {
 // MODALS
 // ══════════════════════════════════════════
 
+// ── Mobile Menu ──
+
+function toggleMobileMenu() {
+  document.getElementById('mobileMenuDropdown')?.classList.toggle('open');
+}
+
+function closeMobileMenu() {
+  document.getElementById('mobileMenuDropdown')?.classList.remove('open');
+}
+
 function openModal(id) {
   const modal = document.getElementById(id);
   if (!modal) return;
@@ -803,8 +847,7 @@ async function handleNotifToggle(type, enabled) {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
       showToast('Notification permission denied.', 'var(--c-red)');
-      const toggleId = type === 'morning_digest' ? 'morningDigestToggle' : 'overdueAlertToggle';
-      const el = document.getElementById(toggleId);
+      const el = document.getElementById('morningDigestToggle');
       if (el) el.checked = false;
       return;
     }
@@ -812,8 +855,7 @@ async function handleNotifToggle(type, enabled) {
       await ensureSubscribed();
     } catch {
       showToast('Could not set up push notifications.', 'var(--c-red)');
-      const toggleId = type === 'morning_digest' ? 'morningDigestToggle' : 'overdueAlertToggle';
-      const el = document.getElementById(toggleId);
+      const el = document.getElementById('morningDigestToggle');
       if (el) el.checked = false;
       return;
     }
@@ -844,19 +886,12 @@ async function saveNotifTime(type, time) {
 
 function updateNotifUI() {
   const morningEnabled = notifPrefs.morning_digest?.enabled || false;
-  const overdueEnabled = notifPrefs.overdue_alert?.enabled  || false;
   const morningToggle = document.getElementById('morningDigestToggle');
-  const overdueToggle = document.getElementById('overdueAlertToggle');
   if (morningToggle) morningToggle.checked = morningEnabled;
-  if (overdueToggle) overdueToggle.checked = overdueEnabled;
   const morningRow = document.getElementById('morningTimeRow');
-  const overdueRow = document.getElementById('overdueTimeRow');
   if (morningRow) morningRow.style.display = morningEnabled ? 'flex' : 'none';
-  if (overdueRow) overdueRow.style.display = overdueEnabled ? 'flex' : 'none';
   const morningTime = document.getElementById('morningTimeInput');
-  const overdueTime = document.getElementById('overdueTimeInput');
   if (morningTime) morningTime.value = notifPrefs.morning_digest?.time || '08:00';
-  if (overdueTime) overdueTime.value = notifPrefs.overdue_alert?.time  || '18:00';
 }
 
 async function initNotifications() {
@@ -899,6 +934,14 @@ function setupEventListeners() {
 
   document.getElementById('addTaskInput')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') addNewTask();
+  });
+
+  document.addEventListener('click', e => {
+    const btn = document.getElementById('mobileMenuBtn');
+    const dropdown = document.getElementById('mobileMenuDropdown');
+    if (dropdown && btn && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.remove('open');
+    }
   });
 
   const specEl = document.getElementById('jsonSpec');
