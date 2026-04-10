@@ -1,0 +1,23 @@
+{
+  "name": "TodoLander",
+  "short_name": "TodoLander",
+  "description": "Daily task manager",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#181d1c",
+  "theme_color": "#181d1c",
+  "icons": [
+    {
+      "src": "/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
