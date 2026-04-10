@@ -847,7 +847,8 @@ async function handleNotifToggle(type, enabled) {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
       showToast('Notification permission denied.', 'var(--c-red)');
-      const el = document.getElementById('morningDigestToggle');
+      const toggleId = type === 'morning_digest' ? 'morningDigestToggle' : 'overdueAlertToggle';
+      const el = document.getElementById(toggleId);
       if (el) el.checked = false;
       return;
     }
@@ -855,7 +856,8 @@ async function handleNotifToggle(type, enabled) {
       await ensureSubscribed();
     } catch {
       showToast('Could not set up push notifications.', 'var(--c-red)');
-      const el = document.getElementById('morningDigestToggle');
+      const toggleId = type === 'morning_digest' ? 'morningDigestToggle' : 'overdueAlertToggle';
+      const el = document.getElementById(toggleId);
       if (el) el.checked = false;
       return;
     }
@@ -886,12 +888,19 @@ async function saveNotifTime(type, time) {
 
 function updateNotifUI() {
   const morningEnabled = notifPrefs.morning_digest?.enabled || false;
+  const overdueEnabled = notifPrefs.overdue_alert?.enabled  || false;
   const morningToggle = document.getElementById('morningDigestToggle');
+  const overdueToggle = document.getElementById('overdueAlertToggle');
   if (morningToggle) morningToggle.checked = morningEnabled;
+  if (overdueToggle) overdueToggle.checked = overdueEnabled;
   const morningRow = document.getElementById('morningTimeRow');
+  const overdueRow = document.getElementById('overdueTimeRow');
   if (morningRow) morningRow.style.display = morningEnabled ? 'flex' : 'none';
+  if (overdueRow) overdueRow.style.display = overdueEnabled ? 'flex' : 'none';
   const morningTime = document.getElementById('morningTimeInput');
+  const overdueTime = document.getElementById('overdueTimeInput');
   if (morningTime) morningTime.value = notifPrefs.morning_digest?.time || '08:00';
+  if (overdueTime) overdueTime.value = notifPrefs.overdue_alert?.time  || '18:00';
 }
 
 async function initNotifications() {

@@ -403,6 +403,24 @@
             onchange="saveNotifTime('morning_digest', this.value)">
         </div>
 
+        <!-- Overdue Alert -->
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <span class="settings-label">🌙 Overdue Alert</span>
+            <span class="settings-hint">Evening alert for any unfinished tasks</span>
+          </div>
+          <label class="neu-toggle">
+            <input type="checkbox" id="overdueAlertToggle"
+              onchange="handleNotifToggle('overdue_alert', this.checked)">
+            <span class="neu-toggle-track"><span class="neu-toggle-thumb"></span></span>
+          </label>
+        </div>
+        <div class="settings-sub-row" id="overdueTimeRow" style="display:none">
+          <span class="settings-sub-label">Alert time</span>
+          <input type="time" id="overdueTimeInput" class="settings-time-input" value="18:00"
+            onchange="saveNotifTime('overdue_alert', this.value)">
+        </div>
+
       </div>
 
       <div class="modal-actions">
