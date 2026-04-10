@@ -606,6 +606,9 @@ pre.json-spec {
   /* Color swatches are too small for fingertip taps without touch enlargement */
   .filter-swatch { width: 36px; height: 36px; }
   .add-color-swatch, .add-color-none { width: 28px; height: 28px; }
+  /* Task color picker swatches — match add-task swatch touch size */
+  .task-picker-swatch, .task-picker-none { width: 30px; height: 30px; }
+  .task-color-picker { padding: 10px; gap: 7px; }
 }
 
 /* Eliminate 300 ms tap delay on all buttons */
