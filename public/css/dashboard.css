@@ -561,6 +561,14 @@ pre.json-spec {
   .header-btn[title="Info"] { display: none; }
   /* Sign-out is in Settings modal; hide from header to save space */
   .btn-signout { display: none; }
+  /* Tighter body padding so stacked panels don't waste vertical space */
+  .app-body { padding: 14px; gap: 12px; }
+  .day-header-card { padding: 14px 16px; }
+  /* Overdue alert: stretch edge-to-edge with gutters instead of clipping */
+  .overdue-alert-bar { right: 12px; left: 12px; max-width: none; }
+  /* Toasts: stretch edge-to-edge so they don't overflow on 320 px devices */
+  .toast-container { right: 12px; left: 12px; }
+  .toast { max-width: none; }
 }
 
 /* ── Touch / hover-none devices ── */
@@ -569,6 +577,9 @@ pre.json-spec {
   .task-actions { opacity: 1; }
   /* Larger tap targets */
   .task-action-btn { width: 36px; height: 36px; font-size: 0.9rem; }
+  /* Color swatches are too small for fingertip taps without touch enlargement */
+  .filter-swatch { width: 36px; height: 36px; }
+  .add-color-swatch, .add-color-none { width: 28px; height: 28px; }
 }
 
 /* Eliminate 300 ms tap delay on all buttons */

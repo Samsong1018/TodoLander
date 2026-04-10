@@ -5,6 +5,9 @@
 const API_BASE   = 'https://dailytodo-api.onrender.com';
 const SETTINGS_KEY = 'todolander_settings';
 
+// Token is stored in localStorage as a fallback for mobile browsers that block
+// third-party cookies (SameSite=None). The httpOnly cookie is preferred when
+// available; the Authorization header covers devices where it is blocked.
 function getAuthHeaders() {
   try {
     const user = JSON.parse(localStorage.getItem('todolander_user') || 'null');

@@ -223,6 +223,13 @@
   display: block;
 }
 
+/* ── Very small phones (≤ 400 px) — compact card & brand ── */
+@media (max-width: 400px) {
+  .auth-card  { padding: 28px 20px; }
+  .brand      { margin-bottom: 24px; }
+  .brand-name { font-size: 1.8rem; }
+}
+
 /* Shake animation for errors */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
