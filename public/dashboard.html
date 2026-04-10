@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TodoLander — Dashboard</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="/icon-180.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="TodoLander">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#181d1c">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e2ebe8">
   <!-- Apply theme before CSS loads to prevent flash of wrong theme -->
   <script>(function(){try{var s=JSON.parse(localStorage.getItem('todolander_settings')||'{}');document.documentElement.setAttribute('data-theme',s.theme||'dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="css/neumorphism.css">
@@ -65,6 +72,17 @@
       <button class="btn-signout" onclick="signOut()" title="Sign out">
         👋 Sign Out
       </button>
+
+      <!-- Mobile-only: collapsed ⋮ menu -->
+      <button class="header-btn mobile-menu-btn" id="mobileMenuBtn"
+        onclick="toggleMobileMenu()" title="Menu" aria-label="Menu">⋮</button>
+      <div class="mobile-menu-dropdown" id="mobileMenuDropdown">
+        <button class="mobile-menu-item" onclick="importTasks();closeMobileMenu()">📥 Import</button>
+        <button class="mobile-menu-item" onclick="openExportModal();closeMobileMenu()">📤 Export</button>
+        <button class="mobile-menu-item" onclick="openModal('infoModal');closeMobileMenu()">ℹ️ JSON Info</button>
+        <button class="mobile-menu-item" onclick="openModal('settingsModal');closeMobileMenu()">⚙️ Settings</button>
+        <button class="mobile-menu-item danger" onclick="signOut()">👋 Sign Out</button>
+      </div>
 
     </div>
   </header>
@@ -409,6 +427,7 @@
           <input type="time" id="overdueTimeInput" class="settings-time-input" value="18:00"
             onchange="saveNotifTime('overdue_alert', this.value)">
         </div>
+
       </div>
 
       <div class="modal-actions">
@@ -416,16 +435,6 @@
         <button class="neu-btn neu-btn-accent" onclick="closeModal('settingsModal')">Done</button>
       </div>
     </div>
-  </div>
-
-  <!-- Overdue Alert Bar -->
-  <div class="overdue-alert-bar hidden" id="overdueAlertBar">
-    <div class="overdue-alert-icon">⚠️</div>
-    <div class="overdue-alert-body">
-      <div class="overdue-alert-title">Overdue Tasks</div>
-      <div class="overdue-alert-msg"></div>
-    </div>
-    <button class="overdue-alert-close" onclick="dismissOverdueAlert()" title="Dismiss">✕</button>
   </div>
 
   <!-- Toast Container -->

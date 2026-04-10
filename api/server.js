@@ -283,17 +283,6 @@ function doesRecurOn(task, dateStr) {
   return false;
 }
 
-// Count tasks for a given date from cal_data
-function countTasksForDate(calData, dateStr) {
-  const todos = (calData?.todos?.[dateStr] || []).filter(t => !t.done);
-  const recurring = (calData?.recurring || []).filter(t => {
-    if (!doesRecurOn(t, dateStr)) return false;
-    const ds = calData?.recurringState?.[dateStr] || {};
-    return !ds[t.id]?.dismissed && !ds[t.id]?.done;
-  });
-  return todos.length + recurring.length;
-}
-
 // Count incomplete tasks on dates strictly before today (overdue)
 function countOverdueTasks(calData, todayStr) {
   let count = 0;
@@ -322,6 +311,18 @@ function countOverdueTasks(calData, todayStr) {
   }
   return count;
 }
+
+// Count tasks for a given date from cal_data
+function countTasksForDate(calData, dateStr) {
+  const todos = (calData?.todos?.[dateStr] || []).filter(t => !t.done);
+  const recurring = (calData?.recurring || []).filter(t => {
+    if (!doesRecurOn(t, dateStr)) return false;
+    const ds = calData?.recurringState?.[dateStr] || {};
+    return !ds[t.id]?.dismissed && !ds[t.id]?.done;
+  });
+  return todos.length + recurring.length;
+}
+
 
 async function sendPushToUser(subscription, payload) {
   try {

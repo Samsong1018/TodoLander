@@ -506,21 +506,50 @@ pre.json-spec {
 }
 .settings-time-input:focus { box-shadow: var(--neu-inset), 0 0 0 2px var(--accent-soft); }
 
-/* ── Overdue Alert Bar ── */
-.overdue-alert-bar {
-  position: fixed; top: 76px; right: 24px;
-  background: var(--bg); border-radius: var(--r-lg); box-shadow: var(--neu-raised-lg);
-  padding: 13px 16px; display: flex; align-items: flex-start; gap: 10px;
-  max-width: 310px; z-index: 500; animation: slideDown 0.3s ease both;
-  border-left: 3px solid var(--c-red);
+/* ── Task Color Picker Popover ── */
+.task-color-picker {
+  position: fixed; display: flex; align-items: center; gap: 5px;
+  background: var(--bg); border-radius: var(--r-lg);
+  box-shadow: var(--neu-raised-lg); padding: 8px; z-index: 1000;
+  animation: slideDown 0.15s ease both;
 }
-.overdue-alert-bar.hidden { display: none; }
-.overdue-alert-icon  { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
-.overdue-alert-body  { flex: 1; }
-.overdue-alert-title { font-size: 0.8rem; font-weight: 800; color: var(--c-red); margin-bottom: 2px; }
-.overdue-alert-msg   { font-size: 0.76rem; color: var(--text-secondary); font-weight: 500; line-height: 1.4; }
-.overdue-alert-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.78rem; padding: 2px; flex-shrink: 0; transition: color var(--t-fast); }
-.overdue-alert-close:hover { color: var(--text-secondary); }
+.task-picker-swatch {
+  width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: transform var(--t), box-shadow var(--t);
+  box-shadow: var(--neu-raised-sm);
+}
+.task-picker-swatch:hover  { transform: scale(1.2); }
+.task-picker-swatch.active { box-shadow: var(--neu-inset-sm); transform: scale(0.9); border-color: rgba(255,255,255,0.3); }
+.task-picker-none {
+  width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+  border: 1.5px solid var(--text-muted); background: transparent;
+  box-shadow: var(--neu-raised-sm); display: flex; align-items: center;
+  justify-content: center; font-size: 0.5rem; color: var(--text-muted);
+  transition: all var(--t); flex-shrink: 0;
+}
+.task-picker-none.active { box-shadow: var(--neu-inset-sm); }
+.task-picker-none:hover   { color: var(--text-secondary); }
+
+/* ── Mobile Menu ── */
+.mobile-menu-btn { display: none; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.05em; }
+
+.mobile-menu-dropdown {
+  display: none; position: absolute; top: calc(100% + 8px); right: 0;
+  background: var(--bg); border-radius: var(--r-lg); box-shadow: var(--neu-raised-lg);
+  z-index: 300; min-width: 190px; padding: 6px;
+  animation: slideDown 0.2s ease both;
+}
+.mobile-menu-dropdown.open { display: flex; flex-direction: column; }
+
+.mobile-menu-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; border: none; background: none; border-radius: var(--r);
+  cursor: pointer; font-family: var(--font-body); font-size: 0.875rem;
+  font-weight: 600; color: var(--text-secondary); text-align: left; width: 100%;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.mobile-menu-item:hover { background: var(--accent-soft); color: var(--text-primary); }
+.mobile-menu-item.danger:hover { color: var(--c-red); }
 
 /* ── Toast ── */
 .toast-container { position: fixed; bottom: 22px; right: 22px; display: flex; flex-direction: column; gap: 7px; z-index: 2000; }
@@ -552,20 +581,17 @@ pre.json-spec {
   .tasks-scroll    { overflow-y: visible; flex: none; }
 }
 
-/* ── Small phones — tighten header, hide rarely-used buttons ── */
+/* ── Small phones — collapse header into mobile menu ── */
 @media (max-width: 560px) {
   .app-header { padding: 0 14px; gap: 8px; }
   .header-search { max-width: none; }
-  /* Import and Info are desktop-focused actions; hide on phones */
-  .header-btn[title="Import"],
-  .header-btn[title="Info"] { display: none; }
-  /* Sign-out is in Settings modal; hide from header to save space */
-  .btn-signout { display: none; }
+  /* Hide all individual action buttons; show the ⋮ mobile menu instead */
+  .header-actions > .header-btn:not(.mobile-menu-btn),
+  .header-actions > .btn-signout { display: none; }
+  .mobile-menu-btn { display: flex; }
   /* Tighter body padding so stacked panels don't waste vertical space */
   .app-body { padding: 14px; gap: 12px; }
   .day-header-card { padding: 14px 16px; }
-  /* Overdue alert: stretch edge-to-edge with gutters instead of clipping */
-  .overdue-alert-bar { right: 12px; left: 12px; max-width: none; }
   /* Toasts: stretch edge-to-edge so they don't overflow on 320 px devices */
   .toast-container { right: 12px; left: 12px; }
   .toast { max-width: none; }
@@ -580,6 +606,9 @@ pre.json-spec {
   /* Color swatches are too small for fingertip taps without touch enlargement */
   .filter-swatch { width: 36px; height: 36px; }
   .add-color-swatch, .add-color-none { width: 28px; height: 28px; }
+  /* Task color picker swatches — match add-task swatch touch size */
+  .task-picker-swatch, .task-picker-none { width: 30px; height: 30px; }
+  .task-color-picker { padding: 10px; gap: 7px; }
 }
 
 /* Eliminate 300 ms tap delay on all buttons */
