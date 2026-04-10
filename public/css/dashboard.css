@@ -538,14 +538,18 @@ pre.json-spec {
 
 /* ── Responsive ── */
 @media (max-width: 860px) {
-  .app-body       { grid-template-columns: 1fr; overflow-y: auto; }
-  .sidebar        { overflow: visible; }
-  .header-title   { display: none; }
+  /* Switch to native window scroll — body overflow:hidden blocks it on mobile */
+  .dashboard-page  { overflow: visible; }
+  .app-body        { grid-template-columns: 1fr; overflow: visible; flex: none; }
+  .sidebar         { overflow: visible; }
+  .header-title    { display: none; }
+  /* Sticky header so it stays visible as you scroll */
+  .app-header      { position: sticky; top: 0; z-index: 100; }
 
-  /* Let tasks expand fully so app-body handles all page scrolling */
-  .main-panel     { overflow: visible; min-height: 0; }
+  /* Tasks and main panel expand to their full content height */
+  .main-panel      { overflow: visible; min-height: 0; }
   .tasks-container { overflow: visible; flex: none; }
-  .tasks-scroll   { overflow-y: visible; flex: none; }
+  .tasks-scroll    { overflow-y: visible; flex: none; }
 }
 
 /* ── Small phones — tighten header, hide rarely-used buttons ── */
