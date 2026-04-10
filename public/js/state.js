@@ -5,11 +5,10 @@
 const API_BASE   = 'https://dailytodo-api.onrender.com';
 const SETTINGS_KEY = 'todolander_settings';
 
+// Auth is handled via the httpOnly session cookie sent automatically with
+// credentials:'include'. No token is stored in localStorage.
 function getAuthHeaders() {
-  try {
-    const user = JSON.parse(localStorage.getItem('todolander_user') || 'null');
-    return user?.token ? { 'Authorization': `Bearer ${user.token}` } : {};
-  } catch { return {}; }
+  return {};
 }
 
 // ── Auth ──

@@ -24,7 +24,23 @@ if (vapidConfigured) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(helmet());
+// Trust Render.com's reverse proxy so req.ip reflects the real client IP.
+// Without this, rate limiting would treat all clients as the same IP.
+app.set('trust proxy', 1);
+
+// CSP: allow the tiny inline theme-detection snippet in <head> via its SHA-256 hash.
+// All other scripts must be loaded from 'self' (no unsafe-inline).
+// The hash covers exactly:
+//   (function(){try{var s=JSON.parse(localStorage.getItem('todolander_settings')||'{}');
+//   document.documentElement.setAttribute('data-theme',s.theme||'dark');}catch(e){}})();
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      'script-src': ["'self'", "'sha256-GuTAr52SXvRJLc4/jEFuGVhMJFjNnyxU6dL+ZXDvDVU='"],
+    },
+  },
+}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '../public')));
 
@@ -125,6 +141,16 @@ app.get('/api/user', (req, res) => {
 app.put('/api/user', (req, res) => {
   authenticateToken(req, res, async () => {
     const { todos, recurring, recurringState } = req.body;
+
+    if (!todos || typeof todos !== 'object' || Array.isArray(todos)) {
+      return res.status(400).json({ error: 'Invalid data: todos must be an object.' });
+    }
+    if (!Array.isArray(recurring)) {
+      return res.status(400).json({ error: 'Invalid data: recurring must be an array.' });
+    }
+    if (!recurringState || typeof recurringState !== 'object' || Array.isArray(recurringState)) {
+      return res.status(400).json({ error: 'Invalid data: recurringState must be an object.' });
+    }
 
     try {
       await sql`
@@ -320,13 +346,23 @@ app.post('/api/push/subscribe', (req, res) => {
   authenticateToken(req, res, async () => {
     const { subscription, timezone } = req.body;
     if (!subscription?.endpoint) return res.status(400).json({ error: 'Invalid subscription' });
+
+    // Validate timezone; fall back to UTC for invalid values
+    let validTimezone = 'UTC';
+    if (timezone && typeof timezone === 'string') {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+        validTimezone = timezone;
+      } catch { /* invalid IANA timezone — use UTC */ }
+    }
+
     try {
       // Upsert — delete existing row for this endpoint then insert fresh
       const endpoint = subscription.endpoint;
       await sql`DELETE FROM push_subscriptions WHERE user_id = ${req.user.user_id} AND subscription->>'endpoint' = ${endpoint}`;
       await sql`
         INSERT INTO push_subscriptions (user_id, subscription, timezone)
-        VALUES (${req.user.user_id}, ${sql.json(subscription)}, ${timezone || 'UTC'})
+        VALUES (${req.user.user_id}, ${sql.json(subscription)}, ${validTimezone})
       `;
       res.status(201).json({ message: 'subscribed' });
     } catch (err) {
@@ -369,6 +405,27 @@ app.get('/api/push/prefs', (req, res) => {
 app.put('/api/push/prefs', (req, res) => {
   authenticateToken(req, res, async () => {
     const prefs = req.body;
+
+    if (!prefs || typeof prefs !== 'object' || Array.isArray(prefs)) {
+      return res.status(400).json({ error: 'Invalid preferences format.' });
+    }
+    const ALLOWED_PREF_KEYS = new Set(['morning_digest', 'overdue_alert']);
+    for (const key of Object.keys(prefs)) {
+      if (!ALLOWED_PREF_KEYS.has(key)) {
+        return res.status(400).json({ error: `Unknown preference key: ${key}` });
+      }
+      const pref = prefs[key];
+      if (!pref || typeof pref !== 'object' || Array.isArray(pref)) {
+        return res.status(400).json({ error: `Invalid format for preference: ${key}` });
+      }
+      if ('enabled' in pref && typeof pref.enabled !== 'boolean') {
+        return res.status(400).json({ error: `'enabled' for ${key} must be a boolean.` });
+      }
+      if ('time' in pref && !/^\d{2}:\d{2}$/.test(pref.time)) {
+        return res.status(400).json({ error: `'time' for ${key} must be HH:MM.` });
+      }
+    }
+
     try {
       await sql`UPDATE users SET notification_prefs = ${sql.json(prefs)} WHERE id = ${req.user.user_id}`;
       res.json({ message: 'saved' });
