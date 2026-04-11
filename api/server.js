@@ -493,21 +493,29 @@ const NOTIFICATION_TYPES = {
 
 async function runNotificationScheduler() {
   if (!vapidConfigured) return;
-  try {
-    const rows = await sql`
-      SELECT ps.user_id, ps.subscription, ps.timezone, u.cal_data, u.notification_prefs
-      FROM push_subscriptions ps
-      JOIN users u ON ps.user_id = u.id
-    `;
-    for (const row of rows) {
-      const prefs = row.notification_prefs || {};
-      const sub = { subscription: row.subscription, timezone: row.timezone };
-      for (const handler of Object.values(NOTIFICATION_TYPES)) {
-        await handler(row.user_id, row.cal_data, prefs, sub);
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const rows = await sql`
+        SELECT ps.user_id, ps.subscription, ps.timezone, u.cal_data, u.notification_prefs
+        FROM push_subscriptions ps
+        JOIN users u ON ps.user_id = u.id
+      `;
+      for (const row of rows) {
+        const prefs = row.notification_prefs || {};
+        const sub = { subscription: row.subscription, timezone: row.timezone };
+        for (const handler of Object.values(NOTIFICATION_TYPES)) {
+          await handler(row.user_id, row.cal_data, prefs, sub);
+        }
+      }
+      return; // success
+    } catch (err) {
+      if (attempt < MAX_ATTEMPTS) {
+        await new Promise(r => setTimeout(r, 2000 * attempt)); // 2 s, then 4 s
+      } else {
+        console.error('Notification scheduler error:', err.message);
       }
     }
-  } catch (err) {
-    console.error('Notification scheduler error:', err.message);
   }
 }
 
