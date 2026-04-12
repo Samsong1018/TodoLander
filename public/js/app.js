@@ -15,6 +15,58 @@ let searchQuery       = '';
 let selectedAddColor  = null;
 
 // ══════════════════════════════════════════
+// GREETING
+// ══════════════════════════════════════════
+
+function getWelcomeGreeting(name) {
+  const hour = new Date().getHours();
+  let pool;
+  if (hour >= 5 && hour < 12) {
+    pool = [
+      `Good morning, ${name}!`,
+      `Rise and shine, ${name}!`,
+      `Morning, ${name}!`,
+      `Hey ${name}, ready to tackle the day?`,
+      `Wakey wakey, ${name}!`,
+    ];
+  } else if (hour >= 12 && hour < 17) {
+    pool = [
+      `Good afternoon, ${name}!`,
+      `Afternoon, ${name}!`,
+      `Hey ${name}, how's the day going?`,
+      `Keep it up, ${name}!`,
+      `Halfway there, ${name}!`,
+    ];
+  } else if (hour >= 17 && hour < 21) {
+    pool = [
+      `Good evening, ${name}!`,
+      `Evening, ${name}!`,
+      `Hey ${name}, winding down?`,
+      `How was your day, ${name}?`,
+      `Almost done for the day, ${name}!`,
+    ];
+  } else {
+    pool = [
+      `Burning the midnight oil, ${name}?`,
+      `Still at it, ${name}?`,
+      `Night owl mode, ${name}!`,
+      `Late night vibes, ${name}!`,
+      `The night is young, ${name}!`,
+    ];
+  }
+  const universal = [
+    `Welcome back, ${name}!`,
+    `Good to see you, ${name}!`,
+    `Hey ${name}, what's up?`,
+    `How's it going, ${name}?`,
+    `Look who's here — ${name}!`,
+    `Great to have you, ${name}!`,
+  ];
+  const combined = [...pool, ...universal];
+  return combined[Math.floor(Math.random() * combined.length)];
+}
+
+// ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
 
@@ -42,7 +94,7 @@ async function init() {
   recurring      = data.recurring;
   recurringState = data.recurringState;
 
-  // Populate user info in settings modal
+  // Populate user info in settings modal + welcome banner
   try {
     const user = JSON.parse(localStorage.getItem('todolander_user') || 'null');
     if (user) {
@@ -50,6 +102,16 @@ async function init() {
       const nameEl  = document.getElementById('settingsUserName');
       if (emailEl) emailEl.textContent = user.email || '—';
       if (nameEl)  nameEl.textContent  = user.name  || user.email || '—';
+
+      const firstName = (user.name || user.email || '').split(' ')[0];
+      if (firstName) {
+        const greetingEl = document.getElementById('welcomeGreeting');
+        const cardEl     = document.getElementById('welcomeCard');
+        if (greetingEl && cardEl) {
+          greetingEl.textContent = getWelcomeGreeting(firstName);
+          cardEl.style.display   = '';
+        }
+      }
     }
   } catch {}
 
@@ -146,6 +208,16 @@ function hasTasksOfColor(dateStr, color) {
   });
 }
 
+function hasIncompleteTasks(dateStr) {
+  if ((todos[dateStr] || []).some(t => !t.done)) return true;
+  return recurring.some(t => {
+    if (!doesRecurOn(t, dateStr)) return false;
+    const ds = recurringState[dateStr] || {};
+    if (ds[t.id]?.dismissed) return false;
+    return !ds[t.id]?.done;
+  });
+}
+
 // ══════════════════════════════════════════
 // CALENDAR
 // ══════════════════════════════════════════
@@ -199,11 +271,13 @@ function renderCalDay(dateStr, dayNum, otherMonth) {
     : hasTasks(dateStr);
   const isToday    = dateStr === todayStr();
   const isSelected = dateStr === selectedDate;
+  const isOverdue  = !isToday && dateStr < todayStr() && hasIncompleteTasks(dateStr);
 
   const classes = ['cal-day',
     otherMonth  ? 'other-month' : '',
     isToday     ? 'today'       : '',
     isSelected  ? 'selected'    : '',
+    isOverdue   ? 'overdue'     : '',
   ].filter(Boolean).join(' ');
 
   const applicableRecurring = getApplicableRecurring(dateStr);
@@ -216,8 +290,9 @@ function renderCalDay(dateStr, dayNum, otherMonth) {
     : allTasks;
   const colors = [...new Set(taskList.slice(0, 6).map(t => t.color || 'var(--text-muted)'))].slice(0, 4);
   const dots   = colors.map(c => `<span class="cal-dot" style="background:${c}"></span>`).join('');
-  const dotsHtml = filtered
-    ? `<div class="cal-day-dots">${dots}</div>`
+  const overdueDot = isOverdue ? `<span class="cal-dot cal-dot-overdue"></span>` : '';
+  const dotsHtml = (filtered || isOverdue)
+    ? `<div class="cal-day-dots">${dots}${overdueDot}</div>`
     : '<div class="cal-day-dots"></div>';
 
   return `<div class="${classes}" onclick="selectDay('${dateStr}')">
@@ -343,7 +418,7 @@ function renderTodoItem(todo, idx) {
       <div class="task-actions">
         <button class="task-action-btn" onclick="showTaskColorPicker('${todo.id}','todo',this)" title="Color">🎨</button>
         <button class="task-action-btn" onclick="startEditTodo('${todo.id}')" title="Edit">✏️</button>
-        <button class="task-action-btn delete" onclick="deleteTodo('${todo.id}')" title="Delete">🗑️</button>
+        <button class="task-action-btn delete" onclick="showDeleteConfirm('${todo.id}', this)" title="Delete">🗑️</button>
       </div>
     </div>`;
 }
@@ -430,6 +505,21 @@ function toggleRecurring(id, dateStr) {
   save();
   renderTasks();
   renderProgress();
+}
+
+function showDeleteConfirm(id, btn) {
+  const item = btn.closest('.task-item');
+  const actionsDiv = item.querySelector('.task-actions');
+
+  const confirm = document.createElement('div');
+  confirm.className = 'recur-confirm-inline';
+  confirm.innerHTML = `
+    <span style="font-size:0.75rem;color:var(--text-muted);font-weight:700">Delete?</span>
+    <button class="neu-btn" style="padding:4px 10px;font-size:0.72rem;border-radius:var(--r-sm)"
+      onclick="renderTasks()">Cancel</button>
+    <button class="neu-btn btn-danger" style="padding:4px 10px;font-size:0.72rem;border-radius:var(--r-sm)"
+      onclick="deleteTodo('${id}')">Delete</button>`;
+  actionsDiv.replaceWith(confirm);
 }
 
 function showRecurDeleteOptions(id, dateStr, btn) {

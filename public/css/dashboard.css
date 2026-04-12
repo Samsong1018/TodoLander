@@ -226,6 +226,9 @@
 
 .cal-day.selected { box-shadow: var(--neu-inset-sm); color: var(--accent); }
 
+.cal-day.overdue .cal-day-num { color: var(--c-red); }
+.cal-dot-overdue { background: var(--c-red) !important; box-shadow: 0 0 4px rgba(248,113,113,0.6); }
+
 .cal-day-num {
   font-size: 0.8rem; font-weight: 700;
   width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
@@ -283,6 +286,25 @@
 .main-panel {
   display: flex; flex-direction: column; gap: 14px;
   overflow: hidden; min-height: 0;
+}
+
+/* ── Welcome Banner ── */
+.welcome-card {
+  background: var(--bg);
+  border-radius: var(--r-lg);
+  box-shadow: var(--neu-raised);
+  padding: 11px 22px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border-left: 3px solid var(--accent);
+}
+.welcome-greeting {
+  font-family: var(--font-brand);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.2;
 }
 
 /* ── Day Header ── */
