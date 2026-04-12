@@ -445,22 +445,24 @@ function renderTodoItem(todo, idx) {
 }
 
 function renderRecurItem(task, dateStr) {
-  const isDone   = recurringState[dateStr]?.[task.id]?.done;
-  const colorBar = `<div class="task-color-bar" style="background:${task.color || 'transparent'}"></div>`;
+  const isDone    = recurringState[dateStr]?.[task.id]?.done;
+  const colorBar  = `<div class="task-color-bar" style="background:${task.color || 'transparent'}"></div>`;
   const freqLabel = task.frequency === 'daily' ? 'Daily' : task.frequency === 'weekly' ? 'Weekly' : 'Monthly';
   return `
     <div class="task-item ${isDone ? 'done' : ''}" data-recur-id="${task.id}">
-      <label class="neu-checkbox" title="Mark as done">
-        <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleRecurring('${task.id}', '${dateStr}')">
-        <span class="neu-checkbox-box"></span>
-      </label>
-      ${colorBar}
-      <span class="task-text">${escapeHtml(task.text)}</span>
-      <span class="task-repeat-badge">${freqLabel}</span>
-      <div class="task-meta"></div>
-      <div class="task-actions">
-        <button class="task-action-btn" onclick="showTaskColorPicker('${task.id}','recur',this)" title="Color">🎨</button>
-        <button class="task-action-btn" onclick="showRecurDeleteOptions('${task.id}', '${dateStr}', this)" title="Delete">🗑️</button>
+      <div class="task-row">
+        <label class="neu-checkbox" title="Mark as done">
+          <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleRecurring('${task.id}', '${dateStr}')">
+          <span class="neu-checkbox-box"></span>
+        </label>
+        ${colorBar}
+        <span class="task-text">${escapeHtml(task.text)}</span>
+        <span class="task-repeat-badge">${freqLabel}</span>
+        <div class="task-meta"></div>
+        <div class="task-actions">
+          <button class="task-action-btn" onclick="showTaskColorPicker('${task.id}','recur',this)" title="Color">🎨</button>
+          <button class="task-action-btn" onclick="showRecurDeleteOptions('${task.id}', '${dateStr}', this)" title="Delete">🗑️</button>
+        </div>
       </div>
     </div>`;
 }
@@ -481,6 +483,7 @@ function deleteTodo(id) {
   if (!todos[selectedDate]) return;
   todos[selectedDate] = todos[selectedDate].filter(t => t.id != id);
   if (todos[selectedDate].length === 0) delete todos[selectedDate];
+  openNotesIds.delete(String(id));
   save();
   renderAll();
   showToast('Task removed.', 'var(--c-red)');
