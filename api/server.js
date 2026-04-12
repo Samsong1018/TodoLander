@@ -376,6 +376,9 @@ app.post('/api/push/subscribe', (req, res) => {
 app.delete('/api/push/subscribe', (req, res) => {
   authenticateToken(req, res, async () => {
     const { endpoint } = req.body;
+    if (!endpoint || typeof endpoint !== 'string') {
+      return res.status(400).json({ error: 'Invalid endpoint.' });
+    }
     try {
       await sql`
         DELETE FROM push_subscriptions
