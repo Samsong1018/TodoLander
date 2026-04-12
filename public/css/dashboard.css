@@ -392,14 +392,40 @@
 
 /* ── Task Item ── */
 .task-item {
-  display: flex; align-items: center; gap: 9px;
-  padding: 11px 13px; border-radius: var(--r);
+  display: flex; flex-direction: column;
+  border-radius: var(--r);
   background: var(--bg); box-shadow: var(--neu-raised-sm);
   transition: box-shadow var(--t), opacity var(--t);
   animation: fadeIn 0.22s ease both;
+  overflow: hidden;
 }
 .task-item:hover { box-shadow: var(--neu-raised); }
 .task-item.done .task-text { text-decoration: line-through; color: var(--text-muted); }
+.task-item.dragging  { opacity: 0.4; box-shadow: var(--neu-raised-lg); }
+.task-item.drag-over { box-shadow: 0 0 0 2px var(--accent), var(--neu-raised-sm); }
+.task-item.notes-open .task-actions { opacity: 1; }
+
+.task-row {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 13px; cursor: grab;
+}
+.task-row:active { cursor: grabbing; }
+
+/* ── Task Notes Bubble ── */
+.task-notes-bubble {
+  display: none;
+  border-top: 1px solid var(--accent-soft);
+  padding: 0 13px 10px;
+}
+.task-notes-bubble.open { display: block; }
+.task-notes-input {
+  width: 100%; min-height: 52px; max-height: 150px; resize: vertical;
+  border: none; background: transparent; font-family: var(--font-body);
+  font-size: 0.8rem; font-weight: 500; color: var(--text-secondary);
+  outline: none; padding: 8px 4px; line-height: 1.5; box-shadow: none;
+}
+.task-notes-input::placeholder { color: var(--text-muted); }
+.task-action-btn.has-notes { color: var(--accent); }
 
 .task-color-bar { width: 3px; height: 28px; border-radius: 2px; flex-shrink: 0; }
 
@@ -586,6 +612,43 @@ pre.json-spec {
 .toast.removing { animation: fadeOut 0.3s ease both; }
 @keyframes fadeOut { to { opacity:0; transform:translateY(8px); } }
 .toast-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Stats Modal ── */
+.stats-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; margin-top: 4px;
+}
+.stat-card {
+  background: var(--bg); border-radius: var(--r-lg);
+  box-shadow: var(--neu-inset-sm); padding: 18px 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center;
+}
+.stat-icon  { font-size: 1.4rem; margin-bottom: 4px; }
+.stat-value {
+  font-family: var(--font-brand); font-size: 1.7rem; font-weight: 700;
+  color: var(--accent); line-height: 1;
+}
+.stat-label {
+  font-size: 0.67rem; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--text-muted); margin-top: 3px;
+}
+
+/* ── Keyboard Shortcuts Modal ── */
+.shortcuts-list { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+.shortcut-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 4px; border-bottom: 1px solid var(--accent-soft);
+}
+.shortcut-row:last-child { border-bottom: none; }
+.shortcut-row kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg); box-shadow: var(--neu-raised-sm);
+  padding: 3px 9px; border-radius: 7px; font-family: var(--font-body);
+  font-size: 0.78rem; font-weight: 700; color: var(--accent);
+  min-width: 30px; white-space: nowrap; flex-shrink: 0;
+}
+.shortcut-row > span:not(.kbd-pair) { font-size: 0.875rem; color: var(--text-secondary); }
+.kbd-pair { display: flex; gap: 4px; flex-shrink: 0; }
 
 /* ── Responsive ── */
 @media (max-width: 860px) {

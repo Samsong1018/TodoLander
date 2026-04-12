@@ -13,6 +13,8 @@ let calMonth       = new Date().getMonth();
 let activeColorFilter = null;
 let searchQuery       = '';
 let selectedAddColor  = null;
+let openNotesIds      = new Set(); // task IDs whose notes bubble is expanded
+let dragId            = null;      // ID of task currently being dragged
 
 // ══════════════════════════════════════════
 // GREETING
@@ -404,21 +406,40 @@ function renderTasks() {
 }
 
 function renderTodoItem(todo, idx) {
-  const colorBar = `<div class="task-color-bar" style="background:${todo.color || 'transparent'}"></div>`;
-  const checked  = todo.done ? 'checked' : '';
+  const colorBar  = `<div class="task-color-bar" style="background:${todo.color || 'transparent'}"></div>`;
+  const checked   = todo.done ? 'checked' : '';
+  const hasNotes  = !!(todo.notes && todo.notes.trim());
+  const notesOpen = openNotesIds.has(String(todo.id));
   return `
-    <div class="task-item ${todo.done ? 'done' : ''}" data-id="${todo.id}" data-idx="${idx}">
-      <label class="neu-checkbox" title="Mark as done">
-        <input type="checkbox" ${checked} onchange="toggleTodo('${todo.id}')">
-        <span class="neu-checkbox-box"></span>
-      </label>
-      ${colorBar}
-      <span class="task-text" ondblclick="startEditTodo('${todo.id}', this)">${escapeHtml(todo.text)}</span>
-      <div class="task-meta"></div>
-      <div class="task-actions">
-        <button class="task-action-btn" onclick="showTaskColorPicker('${todo.id}','todo',this)" title="Color">🎨</button>
-        <button class="task-action-btn" onclick="startEditTodo('${todo.id}')" title="Edit">✏️</button>
-        <button class="task-action-btn delete" onclick="showDeleteConfirm('${todo.id}', this)" title="Delete">🗑️</button>
+    <div class="task-item ${todo.done ? 'done' : ''} ${notesOpen ? 'notes-open' : ''}"
+         data-id="${todo.id}" data-idx="${idx}"
+         draggable="true"
+         ondragstart="onDragStart(event,'${todo.id}')"
+         ondragover="onDragOver(event,'${todo.id}')"
+         ondrop="onDrop(event,'${todo.id}')"
+         ondragleave="onDragLeave(event)"
+         ondragend="onDragEnd(event)">
+      <div class="task-row">
+        <label class="neu-checkbox" title="Mark as done">
+          <input type="checkbox" ${checked} onchange="toggleTodo('${todo.id}')">
+          <span class="neu-checkbox-box"></span>
+        </label>
+        ${colorBar}
+        <span class="task-text" ondblclick="startEditTodo('${todo.id}', this)">${escapeHtml(todo.text)}</span>
+        <div class="task-meta"></div>
+        <div class="task-actions">
+          <button class="task-action-btn ${hasNotes ? 'has-notes' : ''}" onclick="toggleTaskNotes('${todo.id}')" title="Notes">📝</button>
+          <button class="task-action-btn" onclick="showTaskColorPicker('${todo.id}','todo',this)" title="Color">🎨</button>
+          <button class="task-action-btn" onclick="startEditTodo('${todo.id}')" title="Edit">✏️</button>
+          <button class="task-action-btn delete" onclick="showDeleteConfirm('${todo.id}', this)" title="Delete">🗑️</button>
+        </div>
+      </div>
+      <div class="task-notes-bubble ${notesOpen ? 'open' : ''}">
+        <textarea class="task-notes-input" draggable="false"
+          placeholder="Add a note…"
+          onblur="saveTaskNote('${todo.id}', this.value)"
+          onkeydown="if(event.key==='Escape')this.blur()"
+        >${escapeHtml(todo.notes || '')}</textarea>
       </div>
     </div>`;
 }
@@ -463,6 +484,150 @@ function deleteTodo(id) {
   save();
   renderAll();
   showToast('Task removed.', 'var(--c-red)');
+}
+
+// ── Task Notes ──
+
+function toggleTaskNotes(id) {
+  const strId  = String(id);
+  const taskEl = document.querySelector(`[data-id="${id}"]`);
+  const bubble = taskEl?.querySelector('.task-notes-bubble');
+  if (!bubble) return;
+
+  if (openNotesIds.has(strId)) {
+    openNotesIds.delete(strId);
+    bubble.classList.remove('open');
+    taskEl.classList.remove('notes-open');
+  } else {
+    openNotesIds.add(strId);
+    bubble.classList.add('open');
+    taskEl.classList.add('notes-open');
+    setTimeout(() => bubble.querySelector('.task-notes-input')?.focus(), 50);
+  }
+}
+
+function saveTaskNote(id, value) {
+  const task = (todos[selectedDate] || []).find(t => t.id == id);
+  if (!task) return;
+  const trimmed = value.trim();
+  if (trimmed === (task.notes || '').trim()) return;
+  task.notes = trimmed || undefined;
+  save();
+  // Update notes-button indicator without a full re-render
+  const btn = document.querySelector(`[data-id="${id}"] .task-action-btn[title="Notes"]`);
+  if (btn) btn.classList.toggle('has-notes', !!task.notes);
+}
+
+// ── Drag to Reorder ──
+
+function onDragStart(event, id) {
+  dragId = String(id);
+  event.dataTransfer.effectAllowed = 'move';
+  event.currentTarget.classList.add('dragging');
+}
+
+function onDragOver(event, id) {
+  event.preventDefault();
+  if (String(id) === dragId) return;
+  event.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.task-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+  event.currentTarget.classList.add('drag-over');
+}
+
+function onDragLeave(event) {
+  if (!event.currentTarget.contains(event.relatedTarget)) {
+    event.currentTarget.classList.remove('drag-over');
+  }
+}
+
+function onDragEnd(event) {
+  document.querySelectorAll('.task-item').forEach(el => el.classList.remove('drag-over', 'dragging'));
+  dragId = null;
+}
+
+function onDrop(event, targetId) {
+  event.preventDefault();
+  document.querySelectorAll('.task-item').forEach(el => el.classList.remove('drag-over', 'dragging'));
+  if (!dragId || String(targetId) === dragId) { dragId = null; return; }
+
+  const list = todos[selectedDate];
+  if (!list) { dragId = null; return; }
+
+  const fromIdx = list.findIndex(t => String(t.id) === dragId);
+  const toIdx   = list.findIndex(t => String(t.id) === String(targetId));
+  dragId = null;
+  if (fromIdx === -1 || toIdx === -1) return;
+
+  const [item] = list.splice(fromIdx, 1);
+  list.splice(toIdx, 0, item);
+  save();
+  renderTasks();
+}
+
+// ── Day Navigation ──
+
+function navigateDay(delta) {
+  const d = parseDate(selectedDate);
+  d.setDate(d.getDate() + delta);
+  selectedDate = formatDate(d);
+  calYear  = d.getFullYear();
+  calMonth = d.getMonth();
+  renderAll();
+}
+
+// ── Stats ──
+
+function calcStreak() {
+  let streak = 0;
+  const d = new Date();
+  for (let i = 0; i < 366; i++) {
+    const dateStr  = formatDate(d);
+    const dayTodos = todos[dateStr] || [];
+    const dayRecur = getApplicableRecurring(dateStr);
+
+    if (dayTodos.length === 0 && dayRecur.length === 0) {
+      d.setDate(d.getDate() - 1);
+      continue; // skip days with no tasks
+    }
+    const allDone =
+      dayTodos.every(t => t.done) &&
+      dayRecur.every(t => !!(recurringState[dateStr]?.[t.id]?.done));
+    if (!allDone) break;
+    streak++;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+function openStatsModal() {
+  const streak = calcStreak();
+  let totalDone = 0, totalAll = 0;
+  for (const list of Object.values(todos)) {
+    totalDone += list.filter(t => t.done).length;
+    totalAll  += list.length;
+  }
+
+  // This week
+  const now  = new Date();
+  let wDay   = now.getDay();
+  if (appSettings.weekStartsMonday) wDay = (wDay + 6) % 7;
+  const wStart = new Date(now);
+  wStart.setDate(now.getDate() - wDay);
+  wStart.setHours(0, 0, 0, 0);
+  let weekDone = 0, weekAll = 0;
+  for (let i = 0; i < 7; i++) {
+    const d2 = new Date(wStart);
+    d2.setDate(wStart.getDate() + i);
+    const list = todos[formatDate(d2)] || [];
+    weekDone += list.filter(t => t.done).length;
+    weekAll  += list.length;
+  }
+
+  document.getElementById('statStreak').textContent        = streak;
+  document.getElementById('statTotalCompleted').textContent = totalDone.toLocaleString();
+  document.getElementById('statWeek').textContent          = weekAll > 0 ? `${weekDone}/${weekAll}` : '—';
+  document.getElementById('statRate').textContent          = totalAll > 0 ? `${Math.round(totalDone / totalAll * 100)}%` : '—';
+  openModal('statsModal');
 }
 
 function startEditTodo(id, textEl) {
@@ -1045,6 +1210,35 @@ function setupEventListeners() {
 
   const specEl = document.getElementById('jsonSpec');
   if (specEl) specEl.textContent = JSON_SPEC;
+
+  // Global keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.target.matches('input, textarea, select, [contenteditable]')) return;
+    if (e.key !== 'Escape' && (e.ctrlKey || e.metaKey || e.altKey)) return;
+    switch (e.key) {
+      case 'n': case 'N':
+        e.preventDefault();
+        document.getElementById('addTaskInput')?.focus();
+        break;
+      case 't': case 'T':
+        goToToday();
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        navigateDay(-1);
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        navigateDay(1);
+        break;
+      case '?':
+        openModal('shortcutsModal');
+        break;
+      case 'Escape':
+        document.querySelectorAll('.neu-modal-overlay.open').forEach(m => m.classList.remove('open'));
+        break;
+    }
+  });
 }
 
 // ── Start ──
