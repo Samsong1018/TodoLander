@@ -709,21 +709,38 @@ pre.json-spec {
   .task-color-picker { padding: 10px; gap: 7px; }
 }
 
-/* ── Small phone + touch: wrap task actions below the text ── */
-/* On narrow touch screens the 4 action buttons (always visible) would squish
-   the task text. Wrapping them to a second row gives the text full width.
-   Placed after the hover:none block so the 30px size override wins the cascade. */
+/* ── Small phone + touch: collapse task actions into a single ⋯ overflow button ── */
+/* The overflow button is hidden on desktop (all 4 inline buttons are shown there). */
+.task-overflow-btn { display: none; }
+
 @media (max-width: 560px) and (hover: none) {
-  .task-row { flex-wrap: wrap; }
-  .task-actions {
-    width: 100%;
-    justify-content: flex-end;
-    padding: 2px 0 6px 34px; /* left-indent clears the checkbox */
-    gap: 6px;
-  }
-  /* Slightly more compact buttons (still 30 px — fine for fingertip taps) */
-  .task-action-btn { width: 30px; height: 30px; font-size: 0.8rem; }
+  /* Hide the 4 individual action buttons and show only the overflow trigger */
+  .task-actions .task-action-btn:not(.task-overflow-btn) { display: none; }
+  .task-overflow-btn { display: flex; font-size: 1.1rem; letter-spacing: -0.05em; }
 }
+
+/* ── Task Overflow Menu (rendered via JS into document.body) ── */
+.task-overflow-menu {
+  position: fixed;
+  background: var(--bg);
+  border-radius: var(--r-lg);
+  box-shadow: var(--neu-raised-lg);
+  z-index: 1000;
+  min-width: 158px;
+  padding: 6px;
+  animation: slideDown 0.15s ease both;
+}
+
+.task-overflow-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 14px; border: none; background: none; border-radius: var(--r);
+  cursor: pointer; font-family: var(--font-body); font-size: 0.875rem;
+  font-weight: 600; color: var(--text-secondary); text-align: left; width: 100%;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.task-overflow-item:hover        { background: var(--accent-soft); color: var(--text-primary); }
+.task-overflow-item.danger:hover { color: var(--c-red); }
+.task-overflow-item.accent       { color: var(--accent); }
 
 /* Eliminate 300 ms tap delay on all buttons */
 button { touch-action: manipulation; }
