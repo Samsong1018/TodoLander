@@ -472,7 +472,7 @@ function renderRecurItem(task, dateStr) {
 function toggleTodo(id) {
   const list = todos[selectedDate];
   if (!list) return;
-  const task = list.find(t => t.id == id);
+  const task = list.find(t => t.id === id);
   if (!task) return;
   task.done = !task.done;
   save();
@@ -481,7 +481,7 @@ function toggleTodo(id) {
 
 function deleteTodo(id) {
   if (!todos[selectedDate]) return;
-  todos[selectedDate] = todos[selectedDate].filter(t => t.id != id);
+  todos[selectedDate] = todos[selectedDate].filter(t => t.id !== id);
   if (todos[selectedDate].length === 0) delete todos[selectedDate];
   openNotesIds.delete(String(id));
   save();
@@ -510,7 +510,7 @@ function toggleTaskNotes(id) {
 }
 
 function saveTaskNote(id, value) {
-  const task = (todos[selectedDate] || []).find(t => t.id == id);
+  const task = (todos[selectedDate] || []).find(t => t.id === id);
   if (!task) return;
   const trimmed = value.trim();
   if (trimmed === (task.notes || '').trim()) return;
@@ -636,7 +636,7 @@ function openStatsModal() {
 function startEditTodo(id, textEl) {
   const list = todos[selectedDate];
   if (!list) return;
-  const task = list.find(t => t.id == id);
+  const task = list.find(t => t.id === id);
   if (!task) return;
 
   if (!textEl) textEl = document.querySelector(`[data-id="${id}"] .task-text`);
@@ -755,7 +755,7 @@ function addNewTask() {
       showToast('Task already exists.', 'var(--c-yellow)');
       return;
     }
-    existing.push({ text, done: false, color: selectedAddColor || null, id: Date.now() });
+    existing.push({ text, done: false, color: selectedAddColor || null, id: String(Date.now()) });
   }
 
   save();
@@ -826,7 +826,7 @@ function showTaskColorPicker(id, type, btn) {
 
 function applyTaskColor(id, type, color) {
   if (type === 'todo') {
-    const task = todos[selectedDate]?.find(t => t.id == id);
+    const task = todos[selectedDate]?.find(t => t.id === id);
     if (task) { task.color = color; save(); renderAll(); }
   } else {
     const task = recurring.find(t => t.id === id);
@@ -1175,7 +1175,8 @@ async function initNotifications() {
   } catch {
     return;
   }
-  document.getElementById('notifSection')?.style && (document.getElementById('notifSection').style.display = 'block');
+  const notifSection = document.getElementById('notifSection');
+  if (notifSection) notifSection.style.display = 'block';
   try {
     await loadNotifPrefs();
   } catch {}
