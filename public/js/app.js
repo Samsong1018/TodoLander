@@ -843,6 +843,14 @@ function showTaskOverflowMenu(e, id, type, hasNotes, dateStr) {
   document.querySelectorAll('.task-overflow-menu').forEach(m => m.remove());
 
   const triggerBtn = e.currentTarget;
+
+  // Read live note status rather than relying on the value baked into the HTML
+  // attribute — saveTaskNote skips a full re-render, so the attribute can be stale.
+  if (type === 'todo') {
+    const task = (todos[selectedDate] || []).find(t => String(t.id) === String(id));
+    hasNotes = !!(task?.notes?.trim());
+  }
+
   const menu = document.createElement('div');
   menu.className = 'task-overflow-menu';
 
