@@ -871,6 +871,7 @@ function setColorFilter(color, el) {
       bar.classList.remove('visible');
     }
   }
+  syncMainFilterBar();
   renderAll();
 }
 
@@ -879,7 +880,20 @@ function clearColorFilter(e) {
   activeColorFilter = null;
   document.querySelectorAll('.filter-swatch').forEach(s => s.classList.remove('active'));
   document.getElementById('filterActiveBar')?.classList.remove('visible');
+  syncMainFilterBar();
   renderAll();
+}
+
+function syncMainFilterBar() {
+  const bar = document.getElementById('mainFilterBar');
+  if (!bar) return;
+  if (activeColorFilter) {
+    bar.classList.add('visible');
+    bar.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${activeColorFilter};display:inline-block;flex-shrink:0"></span> Filtering by ${COLOR_NAMES[activeColorFilter] || activeColorFilter} &middot; <a href="#" onclick="clearColorFilter(event)" style="color:inherit;text-decoration:underline">Clear</a>`;
+  } else {
+    bar.classList.remove('visible');
+    bar.innerHTML = '';
+  }
 }
 
 // ── Clear Done ──
