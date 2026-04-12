@@ -432,6 +432,7 @@ function renderTodoItem(todo, idx) {
           <button class="task-action-btn" onclick="showTaskColorPicker('${todo.id}','todo',this)" title="Color">🎨</button>
           <button class="task-action-btn" onclick="startEditTodo('${todo.id}')" title="Edit">✏️</button>
           <button class="task-action-btn delete" onclick="showDeleteConfirm('${todo.id}', this)" title="Delete">🗑️</button>
+          <button class="task-action-btn task-overflow-btn" onclick="showTaskOverflowMenu(event,'${todo.id}','todo',${hasNotes})" title="More actions">⋯</button>
         </div>
       </div>
       <div class="task-notes-bubble ${notesOpen ? 'open' : ''}">
@@ -462,6 +463,7 @@ function renderRecurItem(task, dateStr) {
         <div class="task-actions">
           <button class="task-action-btn" onclick="showTaskColorPicker('${task.id}','recur',this)" title="Color">🎨</button>
           <button class="task-action-btn" onclick="showRecurDeleteOptions('${task.id}', '${dateStr}', this)" title="Delete">🗑️</button>
+          <button class="task-action-btn task-overflow-btn" onclick="showTaskOverflowMenu(event,'${task.id}','recur',false,'${dateStr}')" title="More actions">⋯</button>
         </div>
       </div>
     </div>`;
@@ -834,6 +836,63 @@ function applyTaskColor(id, type, color) {
   }
 }
 
+// ── Task Overflow Menu (mobile) ──
+
+function showTaskOverflowMenu(e, id, type, hasNotes, dateStr) {
+  e.stopPropagation();
+  document.querySelectorAll('.task-overflow-menu').forEach(m => m.remove());
+
+  const triggerBtn = e.currentTarget;
+
+  // Read live note status rather than relying on the value baked into the HTML
+  // attribute — saveTaskNote skips a full re-render, so the attribute can be stale.
+  if (type === 'todo') {
+    const task = (todos[selectedDate] || []).find(t => String(t.id) === String(id));
+    hasNotes = !!(task?.notes?.trim());
+  }
+
+  const menu = document.createElement('div');
+  menu.className = 'task-overflow-menu';
+
+  function addItem(icon, label, opts = {}) {
+    const item = document.createElement('button');
+    item.className = 'task-overflow-item'
+      + (opts.danger ? ' danger' : '')
+      + (opts.accent ? ' accent' : '');
+    item.innerHTML = `<span>${icon}</span><span>${label}</span>`;
+    item.onclick = ev => {
+      ev.stopPropagation();
+      menu.remove();
+      document.removeEventListener('click', closeHandler);
+      opts.action();
+    };
+    menu.appendChild(item);
+  }
+
+  if (type === 'todo') {
+    addItem('📝', 'Notes',  { accent: hasNotes, action: () => toggleTaskNotes(id) });
+    addItem('🎨', 'Color',  { action: () => showTaskColorPicker(id, type, triggerBtn) });
+    addItem('✏️', 'Edit',   { action: () => startEditTodo(id) });
+    addItem('🗑️', 'Delete', { danger: true, action: () => showDeleteConfirm(id, triggerBtn) });
+  } else {
+    addItem('🎨', 'Color',  { action: () => showTaskColorPicker(id, type, triggerBtn) });
+    addItem('🗑️', 'Delete', { danger: true, action: () => showRecurDeleteOptions(id, dateStr, triggerBtn) });
+  }
+
+  const rect = triggerBtn.getBoundingClientRect();
+  menu.style.top   = (rect.bottom + 6) + 'px';
+  menu.style.right = (document.documentElement.clientWidth - rect.right) + 'px';
+  document.body.appendChild(menu);
+
+  const closeHandler = ev => {
+    if (!menu.contains(ev.target) && ev.target !== triggerBtn) {
+      menu.remove();
+      document.removeEventListener('click', closeHandler);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', closeHandler), 0);
+}
+
 // ── Progress ──
 
 function renderProgress() {
@@ -871,6 +930,7 @@ function setColorFilter(color, el) {
       bar.classList.remove('visible');
     }
   }
+  syncMainFilterBar();
   renderAll();
 }
 
@@ -879,7 +939,20 @@ function clearColorFilter(e) {
   activeColorFilter = null;
   document.querySelectorAll('.filter-swatch').forEach(s => s.classList.remove('active'));
   document.getElementById('filterActiveBar')?.classList.remove('visible');
+  syncMainFilterBar();
   renderAll();
+}
+
+function syncMainFilterBar() {
+  const bar = document.getElementById('mainFilterBar');
+  if (!bar) return;
+  if (activeColorFilter) {
+    bar.classList.add('visible');
+    bar.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${activeColorFilter};display:inline-block;flex-shrink:0"></span> Filtering by ${COLOR_NAMES[activeColorFilter] || activeColorFilter} &middot; <a href="#" onclick="clearColorFilter(event)" style="color:inherit;text-decoration:underline">Clear</a>`;
+  } else {
+    bar.classList.remove('visible');
+    bar.innerHTML = '';
+  }
 }
 
 // ── Clear Done ──
