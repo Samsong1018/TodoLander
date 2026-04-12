@@ -59,6 +59,11 @@
         📤
       </button>
 
+      <button class="header-btn neu-tooltip" data-tip="Stats &amp; Streak"
+        onclick="openStatsModal()" title="Stats">
+        📊
+      </button>
+
       <button class="header-btn neu-tooltip" data-tip="JSON Format Info"
         onclick="openModal('infoModal')" title="Info">
         ℹ️
@@ -79,6 +84,7 @@
       <div class="mobile-menu-dropdown" id="mobileMenuDropdown">
         <button class="mobile-menu-item" onclick="importTasks();closeMobileMenu()">📥 Import</button>
         <button class="mobile-menu-item" onclick="openExportModal();closeMobileMenu()">📤 Export</button>
+        <button class="mobile-menu-item" onclick="openStatsModal();closeMobileMenu()">📊 Stats</button>
         <button class="mobile-menu-item" onclick="openModal('infoModal');closeMobileMenu()">ℹ️ JSON Info</button>
         <button class="mobile-menu-item" onclick="openModal('settingsModal');closeMobileMenu()">⚙️ Settings</button>
         <button class="mobile-menu-item danger" onclick="signOut()">👋 Sign Out</button>
@@ -438,6 +444,55 @@
       <div class="modal-actions">
         <button class="neu-btn btn-danger" onclick="signOut()">Sign Out</button>
         <button class="neu-btn neu-btn-accent" onclick="closeModal('settingsModal')">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Modal -->
+  <div class="neu-modal-overlay" id="statsModal">
+    <div class="neu-modal">
+      <div class="neu-modal-header">
+        <span class="neu-modal-title">📊 Stats</span>
+        <button class="neu-btn neu-btn-icon" onclick="closeModal('statsModal')">✕</button>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-value" id="statStreak">—</div>
+          <div class="stat-label">Day Streak</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="statTotalCompleted">—</div>
+          <div class="stat-label">All-Time Done</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-value" id="statWeek">—</div>
+          <div class="stat-label">This Week</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📈</div>
+          <div class="stat-value" id="statRate">—</div>
+          <div class="stat-label">Completion Rate</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Keyboard Shortcuts Modal -->
+  <div class="neu-modal-overlay" id="shortcutsModal">
+    <div class="neu-modal" style="max-width:400px">
+      <div class="neu-modal-header">
+        <span class="neu-modal-title">⌨️ Shortcuts</span>
+        <button class="neu-btn neu-btn-icon" onclick="closeModal('shortcutsModal')">✕</button>
+      </div>
+      <div class="shortcuts-list">
+        <div class="shortcut-row"><kbd>N</kbd><span>Focus new task input</span></div>
+        <div class="shortcut-row"><kbd>T</kbd><span>Jump to today</span></div>
+        <div class="shortcut-row"><span class="kbd-pair"><kbd>←</kbd><kbd>→</kbd></span><span>Navigate days</span></div>
+        <div class="shortcut-row"><kbd>?</kbd><span>Show this panel</span></div>
+        <div class="shortcut-row"><kbd>Esc</kbd><span>Close modal / cancel</span></div>
       </div>
     </div>
   </div>
