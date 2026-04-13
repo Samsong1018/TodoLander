@@ -730,6 +730,9 @@ pre.json-spec {
   padding: 6px;
   animation: slideDown 0.15s ease both;
 }
+.task-overflow-menu.flipped {
+  animation: slideUp 0.15s ease both;
+}
 
 .task-overflow-item {
   display: flex; align-items: center; gap: 10px;

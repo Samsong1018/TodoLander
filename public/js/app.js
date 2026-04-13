@@ -880,9 +880,20 @@ function showTaskOverflowMenu(e, id, type, hasNotes, dateStr) {
   }
 
   const rect = triggerBtn.getBoundingClientRect();
-  menu.style.top   = (rect.bottom + 6) + 'px';
   menu.style.right = (document.documentElement.clientWidth - rect.right) + 'px';
+  // Measure before committing a position so we can flip above if needed
+  menu.style.top = '-9999px';
   document.body.appendChild(menu);
+
+  const menuHeight = menu.offsetHeight;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  if (spaceBelow >= menuHeight + 6) {
+    menu.style.top = (rect.bottom + 6) + 'px';
+  } else {
+    // Not enough room below — open upward above the trigger button
+    menu.style.top = Math.max(4, rect.top - menuHeight - 6) + 'px';
+    menu.classList.add('flipped');
+  }
 
   const closeHandler = ev => {
     if (!menu.contains(ev.target) && ev.target !== triggerBtn) {
