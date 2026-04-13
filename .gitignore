@@ -4,3 +4,5 @@
 MyNotes.txt
 .DS_Store
 .claudeignore
+deploy_public.sh
+*.sh

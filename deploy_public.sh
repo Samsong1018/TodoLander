@@ -43,10 +43,28 @@ git checkout -b $PUBLIC_BRANCH
 # 4. Scrub the private folder
 if [ -d "$SCRUB_FOLDER" ]; then
   echo "▸ Removing $SCRUB_FOLDER/..."
+
+  # Self-preservation: if this script lives inside the scrub folder, copy it out first
+  SCRIPT_PATH="$(realpath "$0")"
+  SCRUB_PATH="$(realpath "$SCRUB_FOLDER")"
+  if [[ "$SCRIPT_PATH" == "$SCRUB_PATH"* ]]; then
+    echo "▸ Script is inside $SCRUB_FOLDER — temporarily moving it out..."
+    cp "$SCRIPT_PATH" /tmp/deploy-public-backup.sh
+    SELF_BACKUP=true
+  fi
+
   git rm -r --cached $SCRUB_FOLDER > /dev/null 2>&1 || true
   rm -rf $SCRUB_FOLDER
   git add -A
   git commit -m "chore: remove private files for public release" --allow-empty
+
+  # Restore script to repo root if it was moved
+  if [ "$SELF_BACKUP" = true ]; then
+    echo "▸ Restoring deploy script to repo root..."
+    cp /tmp/deploy-public-backup.sh ./deploy-public.sh
+    chmod +x ./deploy-public.sh
+    rm /tmp/deploy-public-backup.sh
+  fi
 else
   echo "▸ $SCRUB_FOLDER not found — skipping scrub (already clean?)"
 fi
