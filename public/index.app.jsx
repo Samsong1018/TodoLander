@@ -88,7 +88,12 @@ function App() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    fetch(`${API_BASE}/api/user`, { credentials: "include" })
+    let headers = {};
+    try {
+      const u = JSON.parse(localStorage.getItem("todolander-user") || localStorage.getItem("todolander_user") || "null");
+      if (u?.token) headers = { Authorization: `Bearer ${u.token}` };
+    } catch {}
+    fetch(`${API_BASE}/api/user`, { credentials: "include", headers })
       .then((res) => {
         if (res.ok) window.location.href = "app.html";
       })

@@ -273,6 +273,7 @@ async function getPushSubscription() {
 // ========================================================================
 function App() {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState([]);
   const [settings, setSettings] = useState(() => {
     const raw =
@@ -374,10 +375,14 @@ function App() {
         if (savedUser) {
           try {
             setUser(JSON.parse(savedUser));
-          } catch {}
+          } catch {
+            setUser({ name: "User", email: "" });
+          }
         } else setUser({ name: "User", email: "" });
       } catch {
         window.location.href = "index.html";
+      } finally {
+        setLoading(false);
       }
     }
     init();
@@ -888,7 +893,15 @@ function App() {
     return () => window.removeEventListener("message", onMsg);
   }, []);
 
-  if (!user) return null;
+  if (loading || !user) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, color: "var(--ink-3)", fontFamily: "var(--sans)" }}>
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" style={{ animation: "spin 1s linear infinite" }}>
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+      </svg>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <span style={{ fontSize: 13, letterSpacing: "0.08em" }}>Loading…</span>
+    </div>
+  );
 
   const selected = parseDstr(selectedDate);
   const weekdays = settings.weekStart === 1 ? WEEKDAYS_MON : WEEKDAYS_SUN;
