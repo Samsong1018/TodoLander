@@ -1,43 +1,71 @@
-// TodoLander Service Worker — handles push notifications
+// TodoLander Service Worker — push notifications + offline shell cache
 
-self.addEventListener('push', event => {
-  if (!event.data) return;
+const CACHE = "todolander-v1";
+const SHELL = ["/", "/app.html", "/index.html", "/styles.css", "/app.css"];
 
-  let payload;
-  try {
-    payload = event.data.json();
-  } catch {
-    payload = { title: 'TodoLander', body: event.data.text(), url: '/dashboard.html' };
-  }
-
-  const { title = 'TodoLander', body = '', url = '/dashboard.html' } = payload;
-
-  event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon: '/icon-180.png',
-      badge: '/icon-180.png',
-      data: { url },
-      tag: payload.type || 'general', // deduplicates same-type notifications
-      renotify: false,
-    })
+self.addEventListener("install", (e) => {
+  e.waitUntil(
+    caches
+      .open(CACHE)
+      .then((c) => c.addAll(SHELL))
+      .then(() => self.skipWaiting()),
   );
 });
 
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  const url = event.notification.data?.url || '/dashboard.html';
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      // Focus existing tab if already open
-      for (const client of list) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          return client.focus();
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)),
+        ),
+      )
+      .then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener("fetch", (e) => {
+  // Network-first for API calls, cache-first for shell assets
+  if (e.request.url.includes("/api/")) return;
+  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+});
+
+self.addEventListener("push", (e) => {
+  if (!e.data) return;
+  let payload;
+  try {
+    payload = e.data.json();
+  } catch {
+    payload = { title: "TodoLander", body: e.data.text(), url: "/app.html" };
+  }
+
+  const { title = "TodoLander", body = "", url = "/app.html" } = payload;
+  e.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: "/icon-180.png",
+      badge: "/icon-180.png",
+      data: { url },
+      tag: payload.type || "general",
+      renotify: false,
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = e.notification.data?.url || "/app.html";
+  e.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((list) => {
+        for (const client of list) {
+          if (client.url.includes(self.location.origin) && "focus" in client)
+            return client.focus();
         }
-      }
-      // Otherwise open a new tab — must be absolute URL
-      const absolute = url.startsWith('http') ? url : self.location.origin + url;
-      return clients.openWindow(absolute);
-    })
+        const abs = url.startsWith("http") ? url : self.location.origin + url;
+        return clients.openWindow(abs);
+      }),
   );
 });
