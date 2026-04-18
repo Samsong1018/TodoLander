@@ -1,5 +1,6 @@
 // Modals, drawer, toast — shared UI for the app
 const { useState, useEffect, useMemo, useRef } = React;
+const API_BASE = 'https://dailytodo-api.onrender.com';
 
 function Toast({ msg }) {
   if (!msg) return null;
@@ -514,7 +515,7 @@ function NotificationsModal({ onClose, onToast }) {
       .catch(() => setSubStatus("unsubscribed"));
 
     // Load prefs from API
-    fetch("/api/push/prefs", {
+    fetch(`${API_BASE}/api/push/prefs`, {
       credentials: "include",
       headers: getAuthHeaders(),
     })
@@ -544,13 +545,13 @@ function NotificationsModal({ onClose, onToast }) {
         return;
       }
       const reg = await navigator.serviceWorker.ready;
-      const keyRes = await fetch("/api/push/vapid-key");
+      const keyRes = await fetch(`${API_BASE}/api/push/vapid-key`);
       const { publicKey } = await keyRes.json();
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
-      await fetch("/api/push/subscribe", {
+      await fetch(`${API_BASE}/api/push/subscribe`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },
@@ -570,7 +571,7 @@ function NotificationsModal({ onClose, onToast }) {
     try {
       const sub = await getPushSubscription();
       if (sub) {
-        await fetch("/api/push/subscribe", {
+        await fetch(`${API_BASE}/api/push/subscribe`, {
           method: "DELETE",
           credentials: "include",
           headers: { "Content-Type": "application/json", ...getAuthHeaders() },
@@ -588,7 +589,7 @@ function NotificationsModal({ onClose, onToast }) {
   const savePrefs = async () => {
     setSaving(true);
     try {
-      await fetch("/api/push/prefs", {
+      await fetch(`${API_BASE}/api/push/prefs`, {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json", ...getAuthHeaders() },

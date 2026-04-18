@@ -1,5 +1,6 @@
 // TodoLander — auth page (sign in / create account)
 const { useState, useEffect, useMemo } = React;
+const API_BASE = 'https://dailytodo-api.onrender.com';
 
 function MiniCalendar() {
   const today = new Date();
@@ -87,7 +88,7 @@ function App() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    fetch("/api/user", { credentials: "include" })
+    fetch(`${API_BASE}/api/user`, { credentials: "include" })
       .then((res) => {
         if (res.ok) window.location.href = "app.html";
       })
@@ -124,7 +125,7 @@ function App() {
     setSubmitting(true);
     setApiError("");
 
-    const endpoint = mode === "signup" ? "/api/signup" : "/api/login";
+    const endpoint = mode === "signup" ? `${API_BASE}/api/signup` : `${API_BASE}/api/login`;
     const body =
       mode === "signup"
         ? { email: email.trim(), password, name: name.trim() }

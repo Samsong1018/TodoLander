@@ -1,5 +1,6 @@
 // TodoLander — main app (connected to backend API)
 const { useState, useEffect, useMemo, useRef } = React;
+const API_BASE = 'https://dailytodo-api.onrender.com';
 
 // ===== date helpers =====
 const dstr = (d) => {
@@ -312,7 +313,7 @@ function App() {
   useEffect(() => {
     async function init() {
       try {
-        const res = await fetch("/api/user", {
+        const res = await fetch(`${API_BASE}/api/user`, {
           credentials: "include",
           headers: getAuthHeaders(),
         });
@@ -389,7 +390,7 @@ function App() {
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
       try {
-        const res = await fetch("/api/user", {
+        const res = await fetch(`${API_BASE}/api/user`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           credentials: "include",
@@ -824,7 +825,7 @@ function App() {
 
   const signOut = async () => {
     try {
-      await fetch("/api/logout", {
+      await fetch(`${API_BASE}/api/logout`, {
         method: "POST",
         credentials: "include",
         headers: getAuthHeaders(),
