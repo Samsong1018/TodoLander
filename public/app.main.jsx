@@ -333,6 +333,7 @@ function App() {
             localStorage.getItem("todolander_settings") ||
             "{}",
         );
+        let didRoll = false;
         if (settingsNow.autoRoll) {
           const rollKey = "todolander-last-roll";
           const todayStr = dstr(new Date());
@@ -362,11 +363,13 @@ function App() {
                   ),
                 600,
               );
+              didRoll = true;
             }
           }
         }
 
-        loadedTasksRef.current = loaded;
+        // Use sentinel ref when tasks were rolled so the save effect triggers
+        loadedTasksRef.current = didRoll ? [] : loaded;
         setTasks(loaded);
 
         const savedUser =
@@ -455,6 +458,7 @@ function App() {
   const [tweaksOpen, setTweaksOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   const showToast = (msg) => {
     clearTimeout(toastTimerRef.current);
@@ -478,6 +482,10 @@ function App() {
         }
         if (mobileMenuOpen) {
           setMobileMenuOpen(false);
+          return;
+        }
+        if (exportMenuOpen) {
+          setExportMenuOpen(false);
           return;
         }
         if (notesTaskId) {
@@ -552,6 +560,7 @@ function App() {
     view,
     sidebarOpen,
     mobileMenuOpen,
+    exportMenuOpen,
   ]);
 
   // ---- derived ----
@@ -823,8 +832,8 @@ function App() {
 
   const importTasks = (calData) => {
     const loaded = backendToFrontend(calData);
+    loadedTasksRef.current = []; // sentinel: differs from loaded, triggers save
     setTasks(loaded);
-    loadedTasksRef.current = null; // trigger save
     showToast("Import complete");
   };
 
@@ -987,12 +996,33 @@ function App() {
           <button className="tb-btn" onClick={() => setShowImport(true)}>
             <Icon name="import" /> Import
           </button>
-          <button className="tb-btn" onClick={exportJson}>
-            <Icon name="export" /> JSON
-          </button>
-          <button className="tb-btn" onClick={exportIcal}>
-            <Icon name="calendar" size={13} /> iCal
-          </button>
+          <div style={{ position: "relative" }}>
+            <button className="tb-btn" onClick={() => setExportMenuOpen((v) => !v)}>
+              <Icon name="export" /> Export
+            </button>
+            {exportMenuOpen && (
+              <>
+                <div
+                  style={{ position: "fixed", inset: 0, zIndex: 54 }}
+                  onClick={() => setExportMenuOpen(false)}
+                />
+                <div className="mobile-menu" style={{ right: 0, left: "auto", minWidth: 160 }}>
+                  <button
+                    className="tb-btn"
+                    onClick={() => { setExportMenuOpen(false); exportJson(); }}
+                  >
+                    <Icon name="export" size={13} /> Export JSON
+                  </button>
+                  <button
+                    className="tb-btn"
+                    onClick={() => { setExportMenuOpen(false); exportIcal(); }}
+                  >
+                    <Icon name="calendar" size={13} /> Export iCal
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <button className="tb-btn" onClick={() => setShowStats(true)}>
             <Icon name="stats" /> Stats
           </button>
@@ -1505,12 +1535,10 @@ function App() {
                   const isToday = k === dstr(today);
                   const isSelected = k === selectedDate;
                   const dayTasks = tasksByDate[k] || [];
-                  const visible = dayTasks.slice(0, settings.compact ? 2 : 3);
-                  const extra = dayTasks.length - visible.length;
-                  const hasRepeat = dayTasks.some(
-                    (t) => t.repeat && t.repeat !== "none",
-                  );
                   const isOverdue = overdueDates.has(k);
+                  const filtered = dayTasks.filter(filterMatch);
+                  const dotsToShow = filtered.slice(0, 7);
+                  const extraDots = filtered.length - dotsToShow.length;
                   return (
                     <div
                       key={i}
@@ -1528,46 +1556,24 @@ function App() {
                         ) : (
                           c.date.getDate()
                         )}
-                        {hasRepeat && (
-                          <span
-                            className="repeat-ind"
-                            title="Contains repeating task"
-                          >
-                            <Icon name="repeat" size={10} />
-                          </span>
-                        )}
                         {isOverdue && (
                           <span className="overdue-dot" title="Overdue tasks" />
                         )}
                       </div>
-                      {visible.map((t) => (
-                        <div
-                          key={t.id}
-                          className={
-                            "task-pill" +
-                            (t.done ? " done" : "") +
-                            (!filterMatch(t) && (query || filterColors.length)
-                              ? " hidden-by-filter"
-                              : "")
-                          }
-                          style={{
-                            borderLeftColor: tagVar(t.color),
-                            background: `color-mix(in oklab, ${tagVar(t.color)} 8%, var(--paper-2))`,
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedDate(k);
-                          }}
-                          title={t.title}
-                        >
-                          <span className="p-title">{t.title}</span>
-                          {t.repeat && t.repeat !== "none" && (
-                            <span className="repeat-glyph">↻</span>
+                      {(dotsToShow.length > 0 || extraDots > 0) && (
+                        <div className="day-dots">
+                          {dotsToShow.map((t, idx) => (
+                            <span
+                              key={idx}
+                              className={"day-dot" + (t.done ? " faded" : "")}
+                              style={{ background: tagVar(t.color) }}
+                              title={t.title}
+                            />
+                          ))}
+                          {extraDots > 0 && (
+                            <span className="day-dot-more">+{extraDots}</span>
                           )}
                         </div>
-                      ))}
-                      {extra > 0 && (
-                        <div className="more-pill">+ {extra} more</div>
                       )}
                     </div>
                   );

@@ -694,7 +694,7 @@
 /* stats grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-bottom: 24px;
 }
@@ -922,13 +922,18 @@
   .cal-grid { grid-auto-rows: minmax(96px, 1fr); }
 }
 
+/* ---- 900px: collapse toolbar to dropdown ---- */
+@media (max-width: 900px) {
+  .tool-group > .tb-btn,
+  .tool-group > .tb-divider { display: none; }
+  .mobile-more-btn { display: block; }
+}
+
 /* ---- 860px: tablet stack ---- */
 @media (max-width: 860px) {
   .body { grid-template-columns: 1fr; }
   .sidebar { position: static; max-height: none; border-right: none; border-bottom: 1px solid var(--rule); }
   .cal-grid { grid-auto-rows: minmax(70px, 1fr); }
-  .topbar { flex-wrap: wrap; }
-  .search { order: 3; flex-basis: 100%; max-width: none; }
 }
 
 /* ---- 640px: phone ---- */
@@ -941,12 +946,10 @@
   .search .s-icon { left: 9px; }
   .search .s-count { display: none; }
 
-  /* Show hamburger, hide desktop tool buttons */
+  /* Show hamburger */
   .hamburger { display: flex; }
-  .tool-group > .tb-btn,
-  .tool-group > .tb-divider { display: none; }
   .tool-group { margin-left: 0; gap: 2px; }
-  .mobile-more-btn { display: block; }
+  /* mobile-more-btn already visible from 900px breakpoint */
 
   /* User chip: avatar only */
   .user-chip { padding: 3px; border-radius: 50%; }
@@ -991,8 +994,8 @@
   .cal-cell { padding: 4px 5px; gap: 2px; }
   .cal-cell .num { font-size: 10px; }
   .cal-cell.today .num .n-pill { width: 18px; height: 18px; font-size: 9px; }
+  .day-dot { width: 5px; height: 5px; }
   .task-pill { font-size: 9px; padding: 2px 4px; border-radius: 3px; border-left-width: 2px; gap: 3px; }
-  .more-pill { font-size: 9px; padding: 1px 4px; }
 
   /* Week view: horizontal scroll on mobile */
   .week-view-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -14px; padding: 0 14px; }
@@ -1050,9 +1053,32 @@
   display: inline-block;
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: var(--tag-orange);
+  background: var(--tag-red);
   flex-shrink: 0;
   vertical-align: middle;
+}
+
+/* ======= CALENDAR DAY DOTS ======= */
+.day-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 3px;
+}
+.day-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: opacity 0.1s;
+}
+.day-dot.faded { opacity: 0.35; }
+.day-dot-more {
+  font-size: 8px;
+  color: var(--ink-3);
+  line-height: 1;
 }
 
 /* ======= SEARCH DROPDOWN ======= */
@@ -1081,6 +1107,10 @@
 .sr-title { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sr-date { font-size: 11px; color: var(--ink-3); white-space: nowrap; }
 
-/* ======= STATS GRID (4 cards) ======= */
-.stats-grid { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 480px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* ======= ULTRA-NARROW: calendar scroll ======= */
+@media (max-width: 400px) {
+  .main { overflow-x: auto; }
+  .cal-grid, .cal-weekdays { min-width: 280px; }
+}

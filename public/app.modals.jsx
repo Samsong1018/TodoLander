@@ -36,10 +36,22 @@ function Modal({ title, onClose, children, maxWidth }) {
 
 function StatsModal({ tasks, onClose }) {
   const total = tasks.length;
-  const done = tasks.filter((t) => t.done).length;
-  const pct = total ? Math.round((100 * done) / total) : 0;
+
+  // Count done: one-time tasks with done=true, recurring with any completions
+  const done = tasks.filter((t) => {
+    if (!t.repeat || t.repeat === "none") return t.done;
+    return (t.doneDates || []).length > 0;
+  }).length;
+
+  // Overdue: one-time tasks from before today still undone
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const overdue = useMemo(
+    () => tasks.filter((t) => (!t.repeat || t.repeat === "none") && t.date < todayStr && !t.done).length,
+    [tasks, todayStr],
+  );
 
   // Streak: consecutive days ending today with at least 1 completed task
+  // Properly checks doneDates for recurring tasks
   const streak = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -48,21 +60,30 @@ function StatsModal({ tasks, onClose }) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
       const k = d.toISOString().slice(0, 10);
-      if (!tasks.some((t) => t.date === k && t.done)) break;
+      const completedOnDay = tasks.some((t) => {
+        if (!t.repeat || t.repeat === "none") return t.date === k && t.done;
+        return (t.doneDates || []).includes(k);
+      });
+      if (!completedOnDay) break;
       count++;
     }
     return count;
   }, [tasks]);
 
+  // By-color breakdown — done check respects recurring tasks
   const byColor = TAG_COLORS.map((c) => ({
     id: c.id,
     var: c.var,
     count: tasks.filter((t) => t.color === c.id).length,
-    done: tasks.filter((t) => t.color === c.id && t.done).length,
+    done: tasks.filter((t) => {
+      if (t.color !== c.id) return false;
+      if (!t.repeat || t.repeat === "none") return t.done;
+      return (t.doneDates || []).length > 0;
+    }).length,
   }));
   const max = Math.max(1, ...byColor.map((x) => x.count));
 
-  // 35-day activity heatmap
+  // 35-day activity heatmap — counts completed occurrences including recurring
   const streakDays = [];
   const todayD = new Date();
   todayD.setHours(0, 0, 0, 0);
@@ -70,7 +91,10 @@ function StatsModal({ tasks, onClose }) {
     const d = new Date(todayD);
     d.setDate(todayD.getDate() - i);
     const k = d.toISOString().slice(0, 10);
-    const count = tasks.filter((t) => t.date === k && t.done).length;
+    const count = tasks.filter((t) => {
+      if (!t.repeat || t.repeat === "none") return t.date === k && t.done;
+      return (t.doneDates || []).includes(k);
+    }).length;
     const lvl = count === 0 ? 0 : count <= 1 ? 1 : count <= 3 ? 2 : 3;
     streakDays.push({ k, lvl });
   }
@@ -80,15 +104,15 @@ function StatsModal({ tasks, onClose }) {
       <div className="stats-grid">
         <div className="card">
           <div className="n">{total}</div>
-          <div className="l">Total</div>
+          <div className="l">Total tasks</div>
         </div>
         <div className="card">
           <div className="n">{done}</div>
           <div className="l">Completed</div>
         </div>
-        <div className="card">
-          <div className="n">{pct}%</div>
-          <div className="l">Rate</div>
+        <div className="card" style={overdue > 0 ? { borderColor: "var(--tag-red)" } : null}>
+          <div className="n" style={overdue > 0 ? { color: "var(--tag-red)" } : null}>{overdue}</div>
+          <div className="l">Overdue</div>
         </div>
         <div className="card">
           <div className="n">{streak}</div>
@@ -198,6 +222,25 @@ function JsonModal({ calData, user, onClose, onToast }) {
   );
 }
 
+const IMPORT_EXAMPLE = JSON.stringify(
+  {
+    todos: {
+      "2026-04-18": [
+        { id: "t1abc", text: "Buy groceries", done: false, color: "green", notes: "" },
+        { id: "t2xyz", text: "Call dentist", done: true, color: "red", notes: "Ask about May 3rd" },
+      ],
+    },
+    recurring: [
+      { id: "r1abc", text: "Morning workout", frequency: "daily", startDate: "2026-04-01", color: "blue", notes: "" },
+    ],
+    recurringState: {
+      "2026-04-18": { r1abc: { done: true, dismissed: false } },
+    },
+  },
+  null,
+  2,
+);
+
 function ImportModal({ onClose, onImport, onToast }) {
   const [txt, setTxt] = useState("");
   const [err, setErr] = useState("");
@@ -276,17 +319,25 @@ function ImportModal({ onClose, onImport, onToast }) {
 
   return (
     <Modal title="Import" onClose={onClose}>
-      <p style={{ color: "var(--ink-3)", fontSize: 12, margin: "0 0 16px" }}>
-        Paste JSON exported from TodoLander, or upload a .json file. Supports
-        current and legacy formats.
-      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <p style={{ color: "var(--ink-3)", fontSize: 12, margin: 0 }}>
+          Paste JSON exported from TodoLander, or upload a .json file.
+        </p>
+        <button
+          className="btn-ghost"
+          style={{ fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}
+          onClick={() => { setTxt(IMPORT_EXAMPLE); setErr(""); }}
+        >
+          ↙ Paste example
+        </button>
+      </div>
       <textarea
         value={txt}
         onChange={(e) => {
           setTxt(e.target.value);
           setErr("");
         }}
-        placeholder='{"todos": {...}, "recurring": [], "recurringState": {}}'
+        placeholder='{"todos": {"2026-04-18": [...]}, "recurring": [], "recurringState": {}}'
         style={{
           width: "100%",
           minHeight: 180,
