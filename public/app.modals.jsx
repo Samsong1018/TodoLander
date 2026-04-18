@@ -1,6 +1,6 @@
 // Modals, drawer, toast — shared UI for the app
-const { useState, useEffect, useMemo, useRef } = React;
-const API_BASE = 'https://dailytodo-api.onrender.com';
+var { useState, useEffect, useMemo, useRef } = React;
+var API_BASE = 'https://dailytodo-api.onrender.com';
 
 function Toast({ msg }) {
   if (!msg) return null;

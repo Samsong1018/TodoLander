@@ -1,6 +1,6 @@
 // TodoLander — main app (connected to backend API)
-const { useState, useEffect, useMemo, useRef } = React;
-const API_BASE = 'https://dailytodo-api.onrender.com';
+var { useState, useEffect, useMemo, useRef } = React;
+var API_BASE = 'https://dailytodo-api.onrender.com';
 
 // ===== date helpers =====
 const dstr = (d) => {
