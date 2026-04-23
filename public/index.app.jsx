@@ -401,10 +401,6 @@ function App() {
             {apiError && <div className="api-error">{apiError}</div>}
           </form>
 
-          <div className="terms">
-            By continuing you agree to our <a href="#">terms</a> and{" "}
-            <a href="#">privacy notice.</a>
-          </div>
         </div>
       </section>
     </div>
