@@ -35,7 +35,7 @@
 
 .search {
   flex: 1;
-  max-width: 440px;
+  min-width: 0;
   position: relative;
 }
 .search input {
@@ -249,7 +249,8 @@
 /* filter colors */
 .filter-row {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(22px, 30px));
+  width: fit-content;
   gap: 6px;
   margin-bottom: 10px;
 }
@@ -484,7 +485,7 @@
 }
 .task-pill:hover { transform: translateX(1px); }
 .task-pill.done { text-decoration: line-through; color: var(--ink-3); opacity: 0.6; }
-.task-pill .p-title { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.task-pill .p-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .task-pill .repeat-glyph { font-size: 9px; color: var(--ink-3); }
 .task-pill.hidden-by-filter { opacity: 0.15; filter: grayscale(1); }
 
@@ -925,7 +926,8 @@
 /* ---- 900px: collapse toolbar to dropdown ---- */
 @media (max-width: 900px) {
   .tool-group > .tb-btn,
-  .tool-group > .tb-divider { display: none; }
+  .tool-group > .tb-divider,
+  .export-wrap { display: none; }
   .mobile-more-btn { display: block; }
 }
 
@@ -941,6 +943,8 @@
   /* Topbar: single unwrapped row */
   .topbar { flex-wrap: nowrap; padding: 10px 12px; gap: 6px; align-items: center; }
   .brand { font-size: 17px; padding-right: 8px; }
+  /* Hide wordmark text — show icon only */
+  .logo-wordmark { display: none; }
   .search { order: 0; flex: 1; flex-basis: auto; min-width: 0; max-width: none; }
   .search input { padding: 8px 10px 8px 30px; font-size: 12px; }
   .search .s-icon { left: 9px; }
@@ -964,9 +968,10 @@
     width: 300px; max-width: 88vw;
     z-index: 45;
     max-height: none;
+    background: var(--paper);
     border-right: 1px solid var(--rule);
     border-bottom: none;
-    box-shadow: 4px 0 28px oklch(0 0 0 / 0.15);
+    box-shadow: 6px 0 32px oklch(0 0 0 / 0.22);
     transform: translateX(-100%);
     transition: transform 0.28s cubic-bezier(.2,.8,.2,1);
     overflow-y: auto;
@@ -1022,7 +1027,7 @@
 /* ======= WEEK VIEW ======= */
 .week-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
@@ -1037,6 +1042,8 @@
   cursor: pointer;
   transition: background 0.1s;
   min-height: 280px;
+  min-width: 0;
+  overflow: hidden;
 }
 .week-col:hover { background: var(--paper-2); }
 .week-col.today { background: color-mix(in oklab, var(--accent) 6%, var(--paper)); }
@@ -1046,7 +1053,7 @@
   margin-bottom: 8px;
   display: flex; align-items: center; gap: 4px;
 }
-.week-tasks { display: flex; flex-direction: column; gap: 3px; }
+.week-tasks { display: flex; flex-direction: column; gap: 3px; overflow: hidden; min-width: 0; }
 
 /* ======= OVERDUE DOT ======= */
 .overdue-dot {

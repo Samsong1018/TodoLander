@@ -110,13 +110,6 @@ Colors use `oklch()`. Avoid hardcoding color values — always use tokens.
 4. Expired sessions purged hourly
 
 ### Data model (cal_data column on users table)
-```json
-{
-  "todos": { "YYYY-MM-DD": [{ "id", "text", "done", "color", "notes" }] },
-  "recurring": [{ "id", "text", "frequency", "startDate" }],
-  "recurringState": { "YYYY-MM-DD": { "<taskId>": { "done", "dismissed" } } }
-}
-```
 The frontend has a different shape — `backendToFrontend` / `frontendToBackend` conversion functions live in `app.main.jsx`.
 
 ### API endpoints

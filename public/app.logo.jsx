@@ -88,6 +88,7 @@ const TodoLanderLogo = ({
       </svg>
       {showWordmark && (
         <span
+          className="logo-wordmark"
           style={{
             fontFamily: "var(--serif)",
             fontSize: wordmarkSize,

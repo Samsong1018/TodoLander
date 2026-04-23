@@ -6,3 +6,4 @@ MyNotes.txt
 .claudeignore
 deploy_public.sh
 *.sh
+CLAUDE.md

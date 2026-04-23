@@ -996,7 +996,7 @@ function App() {
           <button className="tb-btn" onClick={() => setShowImport(true)}>
             <Icon name="import" /> Import
           </button>
-          <div style={{ position: "relative" }}>
+          <div className="export-wrap" style={{ position: "relative" }}>
             <button className="tb-btn" onClick={() => setExportMenuOpen((v) => !v)}>
               <Icon name="export" /> Export
             </button>
