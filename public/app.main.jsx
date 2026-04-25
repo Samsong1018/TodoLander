@@ -1026,9 +1026,6 @@ function App() {
           <button className="tb-btn" onClick={() => setShowStats(true)}>
             <Icon name="stats" /> Stats
           </button>
-          <button className="tb-btn" onClick={() => setShowJson(true)}>
-            <Icon name="json" /> Raw
-          </button>
           <button className="tb-btn" onClick={() => setShowSettings(true)}>
             <Icon name="settings" /> Settings
           </button>
