@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" aria-label="TodoLander logo">
+  <rect x="2.5" y="5.5" width="27" height="24" rx="4" fill="none" stroke="oklch(0.22 0.012 60)" stroke-width="2"/>
+  <rect x="2.5" y="5.5" width="27" height="6" rx="4" fill="oklch(0.72 0.14 45)" stroke="oklch(0.72 0.14 45)" stroke-width="0.5"/>
+  <line x1="10" y1="2.5" x2="10" y2="8" stroke="oklch(0.22 0.012 60)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="22" y1="2.5" x2="22" y2="8" stroke="oklch(0.22 0.012 60)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="4" y1="17" x2="28" y2="17" stroke="oklch(0.22 0.012 60)" stroke-width="1" opacity="0.35"/>
+  <line x1="16" y1="12" x2="16" y2="29" stroke="oklch(0.22 0.012 60)" stroke-width="1" opacity="0.35"/>
+  <path d="M7.5 21.5 L12 26 L24 14.5" fill="none" stroke="oklch(0.72 0.14 45)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

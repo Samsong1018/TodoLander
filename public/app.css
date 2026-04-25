@@ -567,11 +567,7 @@
 }
 .task-text.done { text-decoration: line-through; color: var(--ink-3); }
 .task-text:hover { background: var(--paper-3); }
-.task-text[contenteditable=true] {
-  background: var(--paper);
-  outline: 1px solid var(--ink);
-  cursor: text;
-}
+
 .task-meta {
   display: flex; align-items: center; gap: 10px;
   font-size: 10px; color: var(--ink-3);
@@ -827,29 +823,6 @@
   box-shadow: 0 10px 24px oklch(0 0 0 / 0.15);
 }
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
-
-/* Tweaks panel */
-.tweaks {
-  position: fixed;
-  bottom: 20px; right: 20px;
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: 10px;
-  padding: 16px;
-  z-index: 70;
-  width: 240px;
-  box-shadow: 0 10px 40px oklch(0 0 0 / 0.1);
-}
-.tweaks h4 {
-  font-family: var(--serif); font-size: 18px; margin: 0 0 12px;
-}
-.tweaks .tw-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-.tweaks .tw-row label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-.tweaks select, .tweaks input[type=range] { width: 100%; }
-.tweaks select {
-  padding: 6px 8px; border: 1px solid var(--rule); border-radius: 4px;
-  background: var(--paper); font-size: 12px;
-}
 
 /* ======= RESPONSIVE ======= */
 
