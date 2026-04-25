@@ -15,27 +15,25 @@ DailyTodo/
 │   └── package.json        # CommonJS, Node
 │
 ├── public/                 # Static frontend — served by Express
-│   ├── index.html          # Landing/auth page shell
+│   ├── index.html          # Auth page shell + inline styles
 │   ├── app.html            # Dashboard shell (PWA entry point)
 │   │
-│   ├── index.app.jsx       # Auth page React root (sign-in / sign-up)
-│   ├── app.main.jsx        # Dashboard React root — calendar, tasks, settings
-│   ├── app.modals.jsx      # Modal components (task editor, settings, etc.)
-│   ├── app.icons.jsx       # SVG icon components
-│   ├── app.logo.jsx        # Logo component
+│   ├── index.app.js        # Auth page — sign-in / sign-up logic
+│   ├── app.main.js         # Dashboard — calendar, tasks, data sync, settings
+│   ├── app.modals.js       # Modal + drawer components
+│   ├── app.utils.js        # Shared utilities: iconSVG, logoHTML, tagVar, getGreeting
 │   │
 │   ├── styles.css          # Shared CSS tokens + typography (light & dark themes)
 │   ├── app.css             # Dashboard-specific component styles
 │   │
+│   ├── assets/             # Static SVG assets
+│   │   ├── icons.svg       # SVG sprite sheet (all UI icons as <symbol> elements)
+│   │   ├── logo.svg        # Static logo (hardcoded colors, for manifest/external use)
+│   │   └── favicon.svg     # Favicon + PWA icon
+│   │
 │   ├── sw.js               # Service worker — offline shell cache + push notifications
 │   ├── manifest.json       # PWA manifest
-│   ├── theme-init.js       # Inline script: reads localStorage and sets data-theme early
-│   ├── tweaks.js           # Minor runtime patches (loaded on app.html only)
-│   │
-│   └── js/                 # Vendored React + Babel (no build step)
-│       ├── react.production.min.js
-│       ├── react-dom.production.min.js
-│       └── babel.min.js
+│   └── theme-init.js       # Inline script: reads localStorage and sets data-theme early
 │
 └── deploy-public.sh        # Deployment helper script
 ```
@@ -44,13 +42,7 @@ DailyTodo/
 
 ## No Build Step
 
-The frontend uses **in-browser Babel** (`type="text/babel"`). JSX files are loaded as plain scripts and transpiled client-side. There is no webpack/vite/npm build for the frontend. Do not add imports/exports to JSX files — they run in a global browser scope.
-
-React globals are available via the vendored scripts: `React`, `ReactDOM`.
-Hooks are destructured from `React` at the top of each JSX file:
-```js
-var { useState, useEffect, useMemo, useRef } = React;
-```
+The frontend is **plain vanilla JS** — no React, no JSX, no Babel, no bundler. Files are loaded as standard `<script src="...">` tags and run in the global browser scope. Do not add `import`/`export` to any JS file.
 
 ---
 
@@ -59,17 +51,27 @@ var { useState, useEffect, useMemo, useRef } = React;
 ### File roles
 | File | What it owns |
 |------|-------------|
-| `index.app.jsx` | Sign-in and sign-up forms, `MiniCalendar` preview |
-| `app.main.jsx` | Everything on the dashboard: calendar grid, task panel, data sync, settings, push notifications |
-| `app.modals.jsx` | Modal UI components consumed by `app.main.jsx` |
-| `app.icons.jsx` | Pure SVG icon components (no state) |
-| `app.logo.jsx` | Brand logo component |
+| `index.app.js` | Sign-in and sign-up forms, mini-calendar preview |
+| `app.main.js` | Everything on the dashboard: calendar grid, task panel, data sync, settings, keyboard shortcuts |
+| `app.modals.js` | Modal and drawer UI components consumed by `app.main.js` |
+| `app.utils.js` | Shared utilities: `iconSVG()`, `logoHTML()`, `tagVar()`, `getGreeting()`, `TAG_COLORS` |
 
 ### Script load order (app.html)
 ```
-app.icons.jsx → app.logo.jsx → app.modals.jsx → app.main.jsx
+app.utils.js → app.modals.js → app.main.js
 ```
 Each file depends on the previous ones being in scope as globals.
+
+### Icons
+Icons live in `assets/icons.svg` as `<symbol>` elements. Reference them via:
+```js
+iconSVG('name', size)  // defined in app.utils.js
+// renders: <svg><use href="assets/icons.svg#name"></use></svg>
+```
+
+### Logo
+- `app.utils.js` `logoHTML(size, showWordmark, wordmarkSize)` — generates an inline SVG string using CSS variables for theming. Used inside the app where CSS vars are available.
+- `assets/logo.svg` — static SVG with hardcoded colors. Used by manifest/external tools only.
 
 ### CSS architecture
 - **`styles.css`** — CSS custom properties (design tokens), fonts, base reset. Loaded on both pages.
@@ -110,7 +112,7 @@ Colors use `oklch()`. Avoid hardcoding color values — always use tokens.
 4. Expired sessions purged hourly
 
 ### Data model (cal_data column on users table)
-The frontend has a different shape — `backendToFrontend` / `frontendToBackend` conversion functions live in `app.main.jsx`.
+The frontend has a different shape — `backendToFrontend` / `frontendToBackend` conversion functions live in `app.main.js`.
 
 ### API endpoints
 | Method | Path | Auth | Purpose |
@@ -148,8 +150,8 @@ VAPID_PRIVATE_KEY=    # VAPID private key
 ---
 
 ## Key Constraints
-- **No frontend build tool** — never use ES module `import/export` in JSX files; everything must work as browser globals.
-- **In-browser Babel** — acceptable for dev/small-scale but means no tree-shaking or bundling.
+- **No frontend build tool** — never use ES module `import`/`export` in JS files; everything runs as browser globals.
+- **No React, no JSX, no Babel** — plain vanilla JS only. Template literals build all HTML strings.
 - **CORS** allows only `todolander.com`, `www.todolander.com`, and the Render.com origin.
 - **CSP** is configured via `helmet` with a SHA-256 hash for the inline theme script — if `theme-init.js` changes, the hash in `server.js` must be updated.
 - **Cookies** use `SameSite=None; Secure` in production for cross-origin support (frontend on Render CDN, API on separate Render service).

@@ -1,3 +1,37 @@
+const TAG_COLORS = [
+  { id: 'red',    var: 'var(--tag-red)' },
+  { id: 'orange', var: 'var(--tag-orange)' },
+  { id: 'yellow', var: 'var(--tag-yellow)' },
+  { id: 'green',  var: 'var(--tag-green)' },
+  { id: 'blue',   var: 'var(--tag-blue)' },
+  { id: 'purple', var: 'var(--tag-purple)' },
+  { id: 'pink',   var: 'var(--tag-pink)' },
+];
+
+function tagVar(id) {
+  const t = TAG_COLORS.find(c => c.id === id);
+  return t ? t.var : 'var(--rule-2)';
+}
+
+function iconSVG(name, size) {
+  size = size || 14;
+  return `<svg width="${size}" height="${size}" aria-hidden="true" focusable="false"><use href="assets/icons.svg#${name}"></use></svg>`;
+}
+
+function getGreeting(name) {
+  const h = new Date().getHours();
+  const pools = {
+    night:   ['Burning the midnight oil,', 'Still up,', 'Night owl mode,', 'The quiet hours suit you,', 'Late again,'],
+    morning: ['Good morning,', 'Rise and shine,', 'Morning,', 'Top of the morning,', 'A fresh start,'],
+    noon:    ['Good afternoon,', 'Hey there,', 'Midday check-in,', 'Hope lunch was good,', 'Afternoon,'],
+    evening: ['Good evening,', 'Winding down,', 'Evening,', 'How was your day,', 'Almost there,'],
+  };
+  const bucket = h < 5 ? 'night' : h < 12 ? 'morning' : h < 17 ? 'noon' : 'evening';
+  const list = pools[bucket];
+  const phrase = list[Math.floor(Math.random() * list.length)];
+  return `${phrase} <em>${name}.</em>`;
+}
+
 function logoHTML(size, showWordmark, wordmarkSize) {
   size = size || 22;
   wordmarkSize = wordmarkSize || 22;

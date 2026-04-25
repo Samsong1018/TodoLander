@@ -108,6 +108,7 @@ function buildIcal(tasks) {
     if (t.repeat && t.repeat !== 'none') {
       const rrule = t.repeat === 'daily' ? 'RRULE:FREQ=DAILY' : t.repeat === 'weekly' ? 'RRULE:FREQ=WEEKLY' : 'RRULE:FREQ=MONTHLY';
       lines.push('BEGIN:VEVENT',`UID:${t.id}@todolander-recur`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${ds}`,`DTEND;VALUE=DATE:${de}`,rrule,`SUMMARY:${escIcal(t.title)}`);
+      if (t.notes) lines.push(`DESCRIPTION:${escIcal(t.notes)}`);
     } else {
       lines.push('BEGIN:VEVENT',`UID:${t.id}@todolander`,`DTSTAMP:${stamp}`,`DTSTART;VALUE=DATE:${ds}`,`DTEND;VALUE=DATE:${de}`,`SUMMARY:${escIcal(t.title)}`);
       if (t.notes) lines.push(`DESCRIPTION:${escIcal(t.notes)}`);
@@ -135,7 +136,7 @@ const S = {
   query: '', filterColors: [], showSearchDrop: false,
   newColor: null, newRepeat: 'none',
   colorPopFor: null, editingId: null,
-  userMenu: false, tweaksOpen: false, sidebarOpen: false,
+  userMenu: false, sidebarOpen: false,
   mobileMenuOpen: false, exportMenuOpen: false,
 };
 
@@ -487,7 +488,7 @@ function buildSidebarHTML(tasksByDate) {
     <button class="sidebar-close" data-action="close-sidebar" aria-label="Close menu">${iconSVG('close',16)}</button>
     <div class="greeting">
       <div class="eyebrow">${esc(prettyDate(today))}</div>
-      <h1>Welcome, <em>${esc(firstName)}.</em></h1>
+      <h1>${getGreeting(esc(firstName))}</h1>
       <div class="today">${todayTasks.length ? `${todayRemaining} task${todayRemaining !== 1 ? 's' : ''} left today` : 'A clean slate today.'}</div>
     </div>
 
@@ -628,37 +629,7 @@ function buildMainHTML(tasksByDate) {
         </div>`}
     </div>`;
 
-  // tweaks panel
-  const tweaks = S.tweaksOpen ? `
-    <div class="tweaks">
-      <h4>Tweaks</h4>
-      <div class="tw-row"><label>Week starts on</label>
-        <select data-action="tweaks-weekstart">
-          <option value="0" ${S.settings.weekStart === 0 ? 'selected' : ''}>Sunday</option>
-          <option value="1" ${S.settings.weekStart === 1 ? 'selected' : ''}>Monday</option>
-        </select>
-      </div>
-      <div class="tw-row"><label>Theme</label>
-        <select data-action="tweaks-theme">
-          <option value="light" ${(S.settings.theme||'light') !== 'dark' ? 'selected' : ''}>Light</option>
-          <option value="dark" ${S.settings.theme === 'dark' ? 'selected' : ''}>Dark</option>
-        </select>
-      </div>
-      <div class="tw-row"><label>Density</label>
-        <select data-action="tweaks-density">
-          <option value="comfortable" ${!S.settings.compact ? 'selected' : ''}>Comfortable</option>
-          <option value="compact" ${S.settings.compact ? 'selected' : ''}>Compact</option>
-        </select>
-      </div>
-      <div class="tw-row"><label>Confirm deletes</label>
-        <select data-action="tweaks-confirmdelete">
-          <option value="on" ${S.settings.confirmDelete ? 'selected' : ''}>On</option>
-          <option value="off" ${!S.settings.confirmDelete ? 'selected' : ''}>Off</option>
-        </select>
-      </div>
-    </div>` : '';
-
-  return calHead + calGrid + dayPanel + tweaks;
+  return calHead + calGrid + dayPanel;
 }
 
 function buildTaskItemHTML(t) {
@@ -700,7 +671,7 @@ function buildTaskItemHTML(t) {
         ${colorPop}
       </div>
       <button class="icon-btn" data-action="start-edit" data-task-id="${esc(t.id)}" title="Edit">${iconSVG('edit',14)}</button>
-      ${isRecurring ? `<button class="icon-btn" data-action="dismiss-occurrence" data-origin-id="${esc(originId)}" data-occ-date="${esc(occDate)}" title="Skip today">${iconSVG('skip',14)}</button>` : ''}
+      ${isRecurring && t.isOccurrence ? `<button class="icon-btn" data-action="dismiss-occurrence" data-origin-id="${esc(originId)}" data-occ-date="${esc(occDate)}" title="Skip today">${iconSVG('skip',14)}</button>` : ''}
       <button class="icon-btn danger" data-action="delete-task" data-origin-id="${esc(originId)}" title="Delete">${iconSVG('trash',14)}</button>
     </div>
   </div>`;
@@ -860,23 +831,9 @@ document.addEventListener('click', e => {
     case 'export-ical': S.exportMenuOpen = false; S.mobileMenuOpen = false; exportIcal(); return;
     case 'sign-out': signOut(); return;
 
-    case 'tweaks-weekstart': S.settings.weekStart = Number(el.value); render(); return;
-    case 'tweaks-theme': S.settings.theme = el.value; render(); return;
-    case 'tweaks-density': S.settings.compact = el.value === 'compact'; render(); return;
-    case 'tweaks-confirmdelete': S.settings.confirmDelete = el.value === 'on'; render(); return;
   }
 });
 
-// handle selects (change events for tweaks)
-document.addEventListener('change', e => {
-  const el = e.target.closest('[data-action]');
-  if (!el) return;
-  const action = el.dataset.action;
-  if (action === 'tweaks-weekstart') { S.settings.weekStart = Number(el.value); scheduleSave(); render(); }
-  if (action === 'tweaks-theme') { S.settings.theme = el.value; scheduleSave(); render(); }
-  if (action === 'tweaks-density') { S.settings.compact = el.value === 'compact'; scheduleSave(); render(); }
-  if (action === 'tweaks-confirmdelete') { S.settings.confirmDelete = el.value === 'on'; scheduleSave(); render(); }
-});
 
 // search input
 document.addEventListener('input', e => {
@@ -964,13 +921,6 @@ document.addEventListener('drop', e => {
   draggingId = null;
 });
 
-// tweaks postMessage protocol
-window.addEventListener('message', e => {
-  const d = e.data || {};
-  if (d.type === '__activate_edit_mode') { S.tweaksOpen = true; render(); }
-  if (d.type === '__deactivate_edit_mode') { S.tweaksOpen = false; render(); }
-});
-try { window.parent.postMessage({ type: '__edit_mode_available' }, '*'); } catch {}
 
 // ===== init =====
 async function initApp() {
@@ -1004,6 +954,7 @@ async function initApp() {
     let loaded = backendToFrontend(calData);
 
     // auto-roll
+    let didRoll = false;
     const settingsNow = (() => { try { return JSON.parse(localStorage.getItem('todolander-settings') || localStorage.getItem('todolander_settings') || '{}'); } catch { return {}; } })();
     if (settingsNow.autoRoll) {
       const rollKey = 'todolander-last-roll', todayStr = dstr(new Date());
@@ -1015,6 +966,7 @@ async function initApp() {
           loaded = loaded.map(t => toRoll.has(t.id) ? { ...t, date: todayStr } : t);
           localStorage.setItem(rollKey, todayStr);
           setTimeout(() => showToast(`Rolled ${toRoll.size} unfinished task${toRoll.size > 1 ? 's' : ''} to today`), 600);
+          didRoll = true;
         }
       }
     }
@@ -1028,6 +980,7 @@ async function initApp() {
     root.innerHTML = '';
     root.appendChild(skeleton);
     render();
+    if (didRoll) scheduleSave();
   } catch {
     window.location.href = 'index.html';
   }

@@ -44,8 +44,8 @@ self.addEventListener("push", (e) => {
   e.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: "/icon-180.png",
-      badge: "/icon-180.png",
+      icon: "/assets/favicon.svg",
+      badge: "/assets/favicon.svg",
       data: { url },
       tag: payload.type || "general",
       renotify: false,
