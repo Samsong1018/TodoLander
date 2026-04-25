@@ -474,7 +474,7 @@ const NOTIFICATION_TYPES = {
       type: 'morning_digest',
       title: 'Good morning!',
       body: `You have ${count} task${count !== 1 ? 's' : ''} today.`,
-      url: '/dashboard.html',
+      url: '/app.html',
     });
   },
 
@@ -490,7 +490,7 @@ const NOTIFICATION_TYPES = {
       type: 'overdue_alert',
       title: 'Tasks need attention',
       body: `You have ${count} overdue task${count !== 1 ? 's' : ''} from previous days.`,
-      url: '/dashboard.html',
+      url: '/app.html',
     });
   },
 };

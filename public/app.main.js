@@ -81,10 +81,17 @@ function expandRepeats(tasks, rangeStart, rangeEnd) {
     if (base > rangeEnd) { out.push(t); continue; }
     out.push(t);
     const cursor = new Date(base);
+    const originDay = base.getDate(); // for monthly: remember the intended day-of-month
     for (let i = 0; i < 400; i++) {
       if (t.repeat === 'daily') cursor.setDate(cursor.getDate() + 1);
       else if (t.repeat === 'weekly') cursor.setDate(cursor.getDate() + 7);
-      else if (t.repeat === 'monthly') cursor.setMonth(cursor.getMonth() + 1);
+      else if (t.repeat === 'monthly') {
+        // Advance to day 1 first to prevent overflow (e.g. Jan 31 + 1 month != Mar 2)
+        cursor.setDate(1);
+        cursor.setMonth(cursor.getMonth() + 1);
+        const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+        cursor.setDate(Math.min(originDay, daysInMonth));
+      }
       else break;
       if (cursor > rangeEnd) break;
       if (cursor >= rangeStart) {
@@ -211,8 +218,11 @@ async function doSave() {
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(frontendToBackend(S.tasks)),
     });
-    if (res.status === 401) window.location.href = 'index.html';
-  } catch {}
+    if (res.status === 401) { window.location.href = 'index.html'; return; }
+    if (!res.ok) showToast('Save failed — changes may not be synced.');
+  } catch {
+    showToast('No connection — changes saved locally.');
+  }
 }
 
 // ===== task actions =====
@@ -325,13 +335,17 @@ function reorderTasks(date, fromId, toId) {
 
 function exportJson() {
   const blob = new Blob([JSON.stringify(frontendToBackend(S.tasks), null, 2)], { type: 'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'todolander-export.json'; a.click();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'todolander-export.json'; a.click();
+  URL.revokeObjectURL(url);
   showToast('Exported JSON');
 }
 
 function exportIcal() {
   const blob = new Blob([buildIcal(S.tasks)], { type: 'text/calendar' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'todolander.ics'; a.click();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'todolander.ics'; a.click();
+  URL.revokeObjectURL(url);
   showToast('Exported .ics');
 }
 
@@ -365,8 +379,7 @@ function buildLoadingHTML() {
   </div>`;
 }
 
-function buildTopbarHTML(expanded, tasksByDate) {
-  const today = getToday();
+function buildTopbarHTML() {
   const firstName = ((S.user && S.user.name) || '').split(' ')[0] || 'friend';
   const q = S.query;
   const searchCount = q ? S.tasks.filter(filterMatch).length : null;
@@ -515,7 +528,7 @@ function buildSidebarHTML(tasksByDate) {
     </section>`;
 }
 
-function buildMainHTML(tasksByDate) {
+function buildMainHTML() {
   const today = getToday(), todayStr = dstr(today);
   const weekdays = S.settings.weekStart === 1 ? WEEKDAYS_MON : WEEKDAYS_SUN;
   const selected = parseDstr(S.selectedDate);
@@ -688,9 +701,9 @@ function render() {
   const sidebar = document.getElementById('sidebar');
   const main = document.getElementById('main');
 
-  if (topbar) topbar.innerHTML = buildTopbarHTML(expanded, tasksByDate);
+  if (topbar) topbar.innerHTML = buildTopbarHTML();
   if (sidebar) sidebar.innerHTML = buildSidebarHTML(tasksByDate);
-  if (main) main.innerHTML = buildMainHTML(tasksByDate);
+  if (main) main.innerHTML = buildMainHTML();
 
   // restore sidebar scroll
   const newSidebar = document.getElementById('sidebar');
@@ -735,14 +748,14 @@ document.addEventListener('click', e => {
       const sb = document.getElementById('sidebar');
       if (sb) sb.classList.toggle('mobile-open', S.sidebarOpen);
       const tb = document.getElementById('topbar');
-      if (tb) tb.innerHTML = buildTopbarHTML(getExpandedTasks(), getTasksByDate(getExpandedTasks()));
+      if (tb) tb.innerHTML = buildTopbarHTML();
       return;
     }
     case 'close-sidebar': S.sidebarOpen = false; {
       const sb = document.getElementById('sidebar');
       if (sb) sb.classList.remove('mobile-open');
       const tb = document.getElementById('topbar');
-      if (tb) tb.innerHTML = buildTopbarHTML(getExpandedTasks(), getTasksByDate(getExpandedTasks()));
+      if (tb) tb.innerHTML = buildTopbarHTML();
       return;
     }
     case 'toggle-mobile-menu': S.mobileMenuOpen = !S.mobileMenuOpen; render(); return;
@@ -828,7 +841,7 @@ document.addEventListener('input', e => {
     const si = document.getElementById('search-input');
     const savedVal = si ? si.value : S.query;
     const tb = document.getElementById('topbar');
-    if (tb) tb.innerHTML = buildTopbarHTML(getExpandedTasks(), getTasksByDate(getExpandedTasks()));
+    if (tb) tb.innerHTML = buildTopbarHTML();
     const si2 = document.getElementById('search-input');
     if (si2) { si2.value = savedVal; si2.focus(); si2.setSelectionRange && si2.setSelectionRange(savedVal.length, savedVal.length); }
   }
@@ -844,7 +857,7 @@ document.addEventListener('focus', e => {
 
 document.addEventListener('blur', e => {
   if (e.target.id === 'search-input') {
-    setTimeout(() => { S.showSearchDrop = false; const tb = document.getElementById('topbar'); if (tb) tb.innerHTML = buildTopbarHTML(getExpandedTasks(), getTasksByDate(getExpandedTasks())); const si = document.getElementById('search-input'); if (si) si.value = S.query; }, 150);
+    setTimeout(() => { S.showSearchDrop = false; const tb = document.getElementById('topbar'); if (tb) tb.innerHTML = buildTopbarHTML(); const si = document.getElementById('search-input'); if (si) si.value = S.query; }, 150);
   }
   // commit inline edit on blur
   if (e.target.classList.contains('task-edit-input')) {
@@ -873,7 +886,7 @@ document.addEventListener('keydown', e => {
   const tag = document.activeElement && document.activeElement.tagName;
   const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
   if (e.key === 'Escape') {
-    if (S.sidebarOpen) { S.sidebarOpen = false; const sb = document.getElementById('sidebar'); if (sb) sb.classList.remove('mobile-open'); const tb = document.getElementById('topbar'); if (tb) tb.innerHTML = buildTopbarHTML(getExpandedTasks(), getTasksByDate(getExpandedTasks())); return; }
+    if (S.sidebarOpen) { S.sidebarOpen = false; const sb = document.getElementById('sidebar'); if (sb) sb.classList.remove('mobile-open'); const tb = document.getElementById('topbar'); if (tb) tb.innerHTML = buildTopbarHTML(); return; }
     if (S.mobileMenuOpen || S.userMenu) { S.mobileMenuOpen = false; S.userMenu = false; render(); return; }
     if (S.colorPopFor) { S.colorPopFor = null; render(); return; }
     if (S.query) { S.query = ''; S.showSearchDrop = false; const si = document.getElementById('search-input'); if (si) si.value = ''; render(); return; }

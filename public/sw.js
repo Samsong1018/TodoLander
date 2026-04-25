@@ -56,15 +56,13 @@ self.addEventListener("push", (e) => {
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
   const url = e.notification.data?.url || "/app.html";
+  const abs = url.startsWith("http") ? url : self.location.origin + url;
   e.waitUntil(
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((list) => {
-        for (const client of list) {
-          if (client.url.includes(self.location.origin) && "focus" in client)
-            return client.focus();
-        }
-        const abs = url.startsWith("http") ? url : self.location.origin + url;
+        const match = list.find((c) => c.url === abs);
+        if (match && "focus" in match) return match.focus();
         return clients.openWindow(abs);
       }),
   );

@@ -160,8 +160,9 @@ function openJsonModal(calData, onToast) {
     });
     bd.querySelector('#json-dl-btn').addEventListener('click', () => {
       const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-      a.download = 'todolander.json'; a.click();
+      const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+      a.href = url; a.download = 'todolander.json'; a.click();
+      URL.revokeObjectURL(url);
       onToast('Downloaded JSON');
     });
   });
