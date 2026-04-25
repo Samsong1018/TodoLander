@@ -137,7 +137,7 @@ const S = {
   newColor: null, newRepeat: 'none',
   colorPopFor: null, editingId: null,
   userMenu: false, sidebarOpen: false,
-  mobileMenuOpen: false, exportMenuOpen: false,
+  mobileMenuOpen: false,
 };
 
 let isLoaded = false, saveTimer = null, toastTimer = null, draggingId = null;
@@ -386,37 +386,33 @@ function buildTopbarHTML(expanded, tasksByDate) {
         </div>`).join('')}
     </div>` : '';
 
-  const exportMenu = S.exportMenuOpen ? `
-    <div style="position:fixed;inset:0;z-index:54" data-action="close-export-menu"></div>
-    <div class="mobile-menu" style="right:0;left:auto;min-width:160px">
-      <button class="tb-btn" data-action="export-json">${iconSVG('export',13)} Export JSON</button>
-      <button class="tb-btn" data-action="export-ical">${iconSVG('calendar',13)} Export iCal</button>
-    </div>` : '';
-
   const mobileMenu = S.mobileMenuOpen ? `
     <div style="position:fixed;inset:0;z-index:54" data-action="close-mobile-menu"></div>
     <div class="mobile-menu">
-      <button class="tb-btn" data-action="open-import" data-close="mobile">${iconSVG('import')} Import</button>
-      <button class="tb-btn" data-action="export-json" data-close="mobile">${iconSVG('export')} Export JSON</button>
-      <button class="tb-btn" data-action="export-ical" data-close="mobile">${iconSVG('calendar',13)} Export iCal</button>
-      <hr>
-      <button class="tb-btn" data-action="open-stats" data-close="mobile">${iconSVG('stats')} Stats</button>
       <button class="tb-btn" data-action="open-json" data-close="mobile">${iconSVG('json')} Raw JSON</button>
-      <button class="tb-btn" data-action="open-settings" data-close="mobile">${iconSVG('settings')} Settings</button>
       <hr>
       <button class="tb-btn danger" data-action="delete-all" data-close="mobile">${iconSVG('trash',12)} Delete all</button>
     </div>` : '';
 
+  const menuDivider = `<div style="border-top:1px solid var(--rule);margin:4px 0"></div>`;
+
   const userMenu = S.userMenu ? `
     <div style="position:fixed;inset:0;z-index:5" data-action="close-user-menu"></div>
-    <div style="position:absolute;top:calc(100% + 6px);right:0;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:6px;min-width:180px;z-index:10;box-shadow:0 10px 30px oklch(0 0 0 / 0.08)">
+    <div style="position:absolute;top:calc(100% + 6px);right:0;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:6px;min-width:190px;z-index:10;box-shadow:0 10px 30px oklch(0 0 0 / 0.08)">
       <div style="padding:10px 12px;border-bottom:1px solid var(--rule);margin-bottom:4px">
         <div style="font-weight:500;font-size:13px">${esc(S.user && S.user.name)}</div>
         <div style="font-size:11px;color:var(--ink-3)">${esc(S.user && S.user.email)}</div>
       </div>
+      <button class="tb-btn" style="width:100%;justify-content:flex-start" data-action="open-stats" data-close="user">${iconSVG('stats')} Stats</button>
+      ${menuDivider}
+      <button class="tb-btn" style="width:100%;justify-content:flex-start" data-action="open-import" data-close="user">${iconSVG('import')} Import</button>
+      <button class="tb-btn" style="width:100%;justify-content:flex-start" data-action="export-json" data-close="user">${iconSVG('export',13)} Export JSON</button>
+      <button class="tb-btn" style="width:100%;justify-content:flex-start" data-action="export-ical" data-close="user">${iconSVG('calendar',13)} Export iCal</button>
+      ${menuDivider}
       <button class="tb-btn" style="width:100%;justify-content:flex-start" data-action="open-settings" data-close="user">${iconSVG('settings')} Settings</button>
       <button class="tb-btn" style="width:100%;justify-content:flex-start" data-action="open-notifs" data-close="user">${iconSVG('bell')} Notifications</button>
       <button class="tb-btn" style="width:100%;justify-content:flex-start" data-action="open-shortcuts" data-close="user">${iconSVG('keyboard')} Shortcuts</button>
+      ${menuDivider}
       <button class="tb-btn danger" style="width:100%;justify-content:flex-start" data-action="sign-out">${iconSVG('signout')} Sign out</button>
     </div>` : '';
 
@@ -430,18 +426,10 @@ function buildTopbarHTML(expanded, tasksByDate) {
       ${searchDrop}
     </div>
     <div class="tool-group">
-      <button class="tb-btn" data-action="open-import">${iconSVG('import')} Import</button>
-      <div class="export-wrap" style="position:relative">
-        <button class="tb-btn" data-action="toggle-export-menu">${iconSVG('export')} Export</button>
-        ${exportMenu}
-      </div>
-      <button class="tb-btn" data-action="open-stats">${iconSVG('stats')} Stats</button>
-      <button class="tb-btn" data-action="open-settings">${iconSVG('settings')} Settings</button>
       <div class="mobile-more-btn">
         <button class="tb-btn" data-action="toggle-mobile-menu" title="More options">${iconSVG('more',16)}</button>
         ${mobileMenu}
       </div>
-      <div class="tb-divider"></div>
       <div style="position:relative">
         <button class="user-chip" data-action="toggle-user-menu">
           <span class="avatar">${esc(firstName.slice(0,1).toUpperCase())}</span>
@@ -741,7 +729,6 @@ document.addEventListener('click', e => {
   // close menus via data-close
   if (el.dataset.close === 'user') S.userMenu = false;
   if (el.dataset.close === 'mobile') S.mobileMenuOpen = false;
-  if (el.dataset.close === 'export') S.exportMenuOpen = false;
 
   switch (action) {
     case 'toggle-sidebar': S.sidebarOpen = !S.sidebarOpen; {
@@ -758,9 +745,7 @@ document.addEventListener('click', e => {
       if (tb) tb.innerHTML = buildTopbarHTML(getExpandedTasks(), getTasksByDate(getExpandedTasks()));
       return;
     }
-    case 'toggle-export-menu': S.exportMenuOpen = !S.exportMenuOpen; S.mobileMenuOpen = false; render(); return;
-    case 'close-export-menu': S.exportMenuOpen = false; render(); return;
-    case 'toggle-mobile-menu': S.mobileMenuOpen = !S.mobileMenuOpen; S.exportMenuOpen = false; render(); return;
+    case 'toggle-mobile-menu': S.mobileMenuOpen = !S.mobileMenuOpen; render(); return;
     case 'close-mobile-menu': S.mobileMenuOpen = false; render(); return;
     case 'toggle-user-menu': S.userMenu = !S.userMenu; render(); return;
     case 'close-user-menu': S.userMenu = false; render(); return;
@@ -827,8 +812,8 @@ document.addEventListener('click', e => {
     case 'open-settings': S.userMenu = false; openSettingsModal(S.settings, newSettings => { S.settings = newSettings; render(); }, S.user); return;
     case 'open-notifs': S.userMenu = false; openNotificationsModal(showToast); return;
     case 'open-shortcuts': S.userMenu = false; openShortcutsModal(); return;
-    case 'export-json': S.exportMenuOpen = false; S.mobileMenuOpen = false; exportJson(); return;
-    case 'export-ical': S.exportMenuOpen = false; S.mobileMenuOpen = false; exportIcal(); return;
+    case 'export-json': S.mobileMenuOpen = false; S.userMenu = false; exportJson(); return;
+    case 'export-ical': S.mobileMenuOpen = false; S.userMenu = false; exportIcal(); return;
     case 'sign-out': signOut(); return;
 
   }
@@ -889,7 +874,7 @@ document.addEventListener('keydown', e => {
   const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
   if (e.key === 'Escape') {
     if (S.sidebarOpen) { S.sidebarOpen = false; const sb = document.getElementById('sidebar'); if (sb) sb.classList.remove('mobile-open'); const tb = document.getElementById('topbar'); if (tb) tb.innerHTML = buildTopbarHTML(getExpandedTasks(), getTasksByDate(getExpandedTasks())); return; }
-    if (S.exportMenuOpen || S.mobileMenuOpen || S.userMenu) { S.exportMenuOpen = false; S.mobileMenuOpen = false; S.userMenu = false; render(); return; }
+    if (S.mobileMenuOpen || S.userMenu) { S.mobileMenuOpen = false; S.userMenu = false; render(); return; }
     if (S.colorPopFor) { S.colorPopFor = null; render(); return; }
     if (S.query) { S.query = ''; S.showSearchDrop = false; const si = document.getElementById('search-input'); if (si) si.value = ''; render(); return; }
     if (S.editingId) { S.editingId = null; render(); return; }
@@ -974,6 +959,15 @@ async function initApp() {
     S.tasks = loaded;
     const savedUser = localStorage.getItem('todolander-user') || localStorage.getItem('todolander_user');
     try { S.user = savedUser ? JSON.parse(savedUser) : { name: 'User', email: '' }; } catch { S.user = { name: 'User', email: '' }; }
+
+    try {
+      const meRes = await fetch(`${API_BASE}/api/me`, { credentials: 'include', headers: getAuthHeaders() });
+      if (meRes.ok) {
+        const me = await meRes.json();
+        S.user = { name: me.name || S.user.name, email: me.email || S.user.email, hasGoogle: !!me.hasGoogle };
+        localStorage.setItem('todolander-user', JSON.stringify(S.user));
+      }
+    } catch {}
     S.loading = false;
     isLoaded = true;
 
@@ -981,6 +975,15 @@ async function initApp() {
     root.appendChild(skeleton);
     render();
     if (didRoll) scheduleSave();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('linked')) {
+      history.replaceState(null, '', window.location.pathname);
+      setTimeout(() => showToast('Google account connected!'), 300);
+    } else if (urlParams.get('error') === 'google_taken') {
+      history.replaceState(null, '', window.location.pathname);
+      setTimeout(() => showToast('That Google account is already linked to another user.'), 300);
+    }
   } catch {
     window.location.href = 'index.html';
   }

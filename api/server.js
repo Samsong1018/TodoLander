@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const uuid = require('uuid');
+const crypto = require('crypto');
 const sql = require('./db');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
@@ -86,7 +87,7 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const rows = await sql`
-      SELECT sessions.*, users.email, users.full_name, users.cal_data
+      SELECT sessions.*, users.email, users.full_name, users.cal_data, users.google_id
       FROM sessions
       JOIN users ON sessions.user_id = users.id
       WHERE sessions.token = ${token}
@@ -545,6 +546,135 @@ setInterval(() => {
   fetch('https://dailytodo-api.onrender.com/health')
     .catch(() => {}); // silently ignore errors
 }, 14 * 60 * 1000);
+
+// ── /api/me ───────────────────────────────────────────────
+app.get('/api/me', (req, res) => {
+  authenticateToken(req, res, () => {
+    res.json({ name: req.user.full_name, email: req.user.email, hasGoogle: !!req.user.google_id });
+  });
+});
+
+// ── Google OAuth ──────────────────────────────────────────
+const googleConfigured = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
+// In-memory state store for CSRF protection; each entry: { expiry, type, userId? }
+const oauthStates = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of oauthStates) if (v.expiry < now) oauthStates.delete(k);
+}, 60_000);
+
+const oauthLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/auth/google', oauthLimiter);
+
+app.get('/auth/google', (req, res) => {
+  if (!googleConfigured) return res.status(503).send('Google OAuth not configured.');
+  const state = crypto.randomBytes(16).toString('hex');
+  oauthStates.set(state, { expiry: Date.now() + 10 * 60 * 1000, type: 'login' });
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+    response_type: 'code',
+    scope: 'openid email profile',
+    state,
+    access_type: 'online',
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+app.get('/auth/google/callback', async (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'https://todolander.com';
+  const { code, state, error } = req.query;
+
+  if (error || !code || !state) return res.redirect(`${frontendUrl}/?error=oauth_denied`);
+
+  const stateData = oauthStates.get(String(state));
+  if (!stateData || Date.now() > stateData.expiry) return res.redirect(`${frontendUrl}/?error=oauth_invalid_state`);
+  oauthStates.delete(String(state));
+
+  try {
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+        grant_type: 'authorization_code',
+      }),
+    });
+    const tokens = await tokenRes.json();
+    if (!tokens.access_token) return res.redirect(`${frontendUrl}/?error=oauth_failed`);
+
+    const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${tokens.access_token}` },
+    });
+    const profile = await profileRes.json();
+    if (!profile.sub || !profile.email) return res.redirect(`${frontendUrl}/?error=oauth_failed`);
+
+    // ── Link flow: attach Google to an already-authenticated account ──
+    if (stateData.type === 'link') {
+      const conflict = await sql`SELECT id FROM users WHERE google_id = ${profile.sub} AND id != ${stateData.userId}`;
+      if (conflict.length > 0) return res.redirect(`${frontendUrl}/app.html?error=google_taken`);
+      await sql`UPDATE users SET google_id = ${profile.sub} WHERE id = ${stateData.userId}`;
+      return res.redirect(`${frontendUrl}/app.html?linked=google`);
+    }
+
+    // ── Login flow: sign in or create account ──
+    let user;
+    const byGoogleId = await sql`SELECT id, full_name, email FROM users WHERE google_id = ${profile.sub}`;
+    if (byGoogleId.length > 0) {
+      user = byGoogleId[0];
+    } else {
+      const byEmail = await sql`SELECT id, full_name, email FROM users WHERE email = ${profile.email}`;
+      if (byEmail.length > 0) {
+        await sql`UPDATE users SET google_id = ${profile.sub} WHERE id = ${byEmail[0].id}`;
+        user = byEmail[0];
+      } else {
+        const [newUser] = await sql`
+          INSERT INTO users (email, full_name, google_id)
+          VALUES (${profile.email}, ${profile.name || profile.email}, ${profile.sub})
+          RETURNING id, full_name, email
+        `;
+        user = newUser;
+      }
+    }
+
+    const token = uuid.v4();
+    const expires_at = new Date(Date.now() + SESSION_DURATION_MS);
+    await sql`INSERT INTO sessions (user_id, token, expires_at) VALUES (${user.id}, ${token}, ${expires_at})`;
+
+    res.cookie('session', token, COOKIE_OPTS);
+    res.redirect(`${frontendUrl}/app.html`);
+  } catch (err) {
+    console.error('OAuth error:', err);
+    res.redirect(`${frontendUrl}/?error=oauth_error`);
+  }
+});
+
+// ── Link Google to an existing account ───────────────────
+app.get('/auth/google/link', (req, res) => {
+  authenticateToken(req, res, () => {
+    if (!googleConfigured) return res.status(503).send('Google OAuth not configured.');
+    const state = crypto.randomBytes(16).toString('hex');
+    oauthStates.set(state, { expiry: Date.now() + 10 * 60 * 1000, type: 'link', userId: req.user.user_id });
+    const params = new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+      response_type: 'code',
+      scope: 'openid email profile',
+      state,
+      access_type: 'online',
+    });
+    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+  });
+});
 
 // Add a lightweight health endpoint to ping
 app.get('/health', (_req, res) => {

@@ -119,9 +119,12 @@ The frontend has a different shape — `backendToFrontend` / `frontendToBackend`
 |--------|------|------|---------|
 | GET | `/api/user` | yes | Fetch cal_data |
 | PUT | `/api/user` | yes | Save cal_data |
+| GET | `/api/me` | yes | Current user name + email |
 | POST | `/api/login` | no | Login (rate limited) |
 | POST | `/api/signup` | no | Sign up (rate limited) |
 | POST | `/api/logout` | yes | Delete session |
+| GET | `/auth/google` | no | Start Google OAuth flow |
+| GET | `/auth/google/callback` | no | Google OAuth callback |
 | GET | `/api/push/vapid-key` | no | VAPID public key |
 | POST | `/api/push/subscribe` | yes | Register push subscription |
 | DELETE | `/api/push/subscribe` | yes | Remove push subscription |
@@ -145,6 +148,10 @@ PORT=                 # defaults to 3000
 VAPID_EMAIL=          # mailto: for VAPID
 VAPID_PUBLIC_KEY=     # VAPID public key
 VAPID_PRIVATE_KEY=    # VAPID private key
+GOOGLE_CLIENT_ID=     # Google OAuth client ID
+GOOGLE_CLIENT_SECRET= # Google OAuth client secret
+GOOGLE_REDIRECT_URI=  # https://dailytodo-api.onrender.com/auth/google/callback
+FRONTEND_URL=         # https://todolander.com (used for post-OAuth redirect)
 ```
 
 ---
