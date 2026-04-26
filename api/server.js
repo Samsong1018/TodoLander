@@ -668,9 +668,11 @@ app.get('/auth/google/callback', async (req, res) => {
 });
 
 // ── Link Google to an existing account ───────────────────
-app.get('/auth/google/link', (req, res) => {
+// POST so the browser sends the session cookie via a credentialed fetch(),
+// avoiding cross-site cookie restrictions on top-level GET navigations.
+app.post('/auth/google/link-init', (req, res) => {
   authenticateToken(req, res, () => {
-    if (!googleConfigured) return res.status(503).send('Google OAuth not configured.');
+    if (!googleConfigured) return res.status(503).json({ error: 'Google OAuth not configured.' });
     const state = crypto.randomBytes(16).toString('hex');
     oauthStates.set(state, { expiry: Date.now() + 10 * 60 * 1000, type: 'link', userId: req.user.user_id });
     const params = new URLSearchParams({
@@ -681,7 +683,7 @@ app.get('/auth/google/link', (req, res) => {
       state,
       access_type: 'online',
     });
-    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+    res.json({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
   });
 });
 

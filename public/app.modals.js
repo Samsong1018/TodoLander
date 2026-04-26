@@ -317,7 +317,20 @@ function openSettingsModal(settings, onChange, user) {
       bd.querySelector('#toggle-completedbottom').addEventListener('click', () => update({ completedAtBottom: !cur.completedAtBottom }));
       bd.querySelector('#toggle-confirmdelete').addEventListener('click', () => update({ confirmDelete: !cur.confirmDelete }));
       const connectGoogleBtn = bd.querySelector('#connect-google-btn');
-      if (connectGoogleBtn) connectGoogleBtn.addEventListener('click', () => { window.location.href = `${API_BASE}/auth/google/link`; });
+      if (connectGoogleBtn) connectGoogleBtn.addEventListener('click', async () => {
+        connectGoogleBtn.disabled = true;
+        try {
+          const res = await fetch(`${API_BASE}/auth/google/link-init`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: getAuthHeaders(),
+          });
+          const data = await res.json();
+          if (data.url) window.location.href = data.url;
+        } catch {
+          connectGoogleBtn.disabled = false;
+        }
+      });
     }
     bind();
   });

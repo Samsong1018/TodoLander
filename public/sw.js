@@ -1,7 +1,13 @@
 // TodoLander Service Worker — push notifications + offline shell cache
 
-const CACHE = "todolander-v1";
-const SHELL = ["/", "/app.html", "/index.html", "/styles.css", "/app.css"];
+const CACHE = "todolander-v2";
+const SHELL = [
+  "/", "/app.html", "/index.html",
+  "/styles.css", "/app.css",
+  "/theme-init.js", "/index.app.js",
+  "/app.utils.js", "/app.modals.js", "/app.main.js",
+  "/assets/favicon.svg",
+];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -26,9 +32,19 @@ self.addEventListener("activate", (e) => {
 });
 
 self.addEventListener("fetch", (e) => {
-  // Network-first for API calls, cache-first for shell assets
   if (e.request.url.includes("/api/")) return;
-  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+  // Stale-while-revalidate: serve cache instantly, refresh in background
+  e.respondWith(
+    caches.open(CACHE).then((cache) =>
+      cache.match(e.request).then((cached) => {
+        const fresh = fetch(e.request).then((res) => {
+          if (res.ok) cache.put(e.request, res.clone());
+          return res;
+        }).catch(() => null);
+        return cached || fresh;
+      })
+    )
+  );
 });
 
 self.addEventListener("push", (e) => {
