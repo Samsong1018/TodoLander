@@ -274,6 +274,7 @@ async function getPushSubscription() {
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [settings, setSettings] = useState(() => {
     const raw =
@@ -382,8 +383,8 @@ function App() {
             setUser({ name: "User", email: "" });
           }
         } else setUser({ name: "User", email: "" });
-      } catch {
-        window.location.href = "index.html";
+      } catch (err) {
+        setLoadError(err?.message === "Server error" ? "server" : "network");
       } finally {
         setLoading(false);
       }
@@ -901,6 +902,17 @@ function App() {
     } catch {}
     return () => window.removeEventListener("message", onMsg);
   }, []);
+
+  if (!loading && loadError) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, fontFamily: "var(--sans)", color: "var(--ink)" }}>
+      <div style={{ fontSize: 15, fontWeight: 500 }}>Couldn't load your data</div>
+      <div style={{ fontSize: 13, color: "var(--ink-3)", maxWidth: 300, textAlign: "center" }}>
+        {loadError === "server" ? "Server error — please try again in a moment." : "Check your connection and try again."}
+      </div>
+      <button onClick={() => location.reload()} style={{ padding: "8px 20px", borderRadius: 6, border: "1px solid var(--rule)", background: "var(--paper)", cursor: "pointer", fontSize: 14 }}>Retry</button>
+      <a href="index.html" style={{ fontSize: 12, color: "var(--ink-3)" }}>Sign out</a>
+    </div>
+  );
 
   if (loading || !user) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16, color: "var(--ink-3)", fontFamily: "var(--sans)" }}>
