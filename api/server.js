@@ -56,6 +56,11 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 
+app.use('/api/', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
 // ── Body parsing (fix #6: 1mb payload cap) ───────────────
 app.use(express.json({ limit: '1mb' }));
 

@@ -944,7 +944,7 @@ async function initApp() {
   });
 
   try {
-    const res = await fetch(`${API_BASE}/api/user`, { credentials: 'include', headers: getAuthHeaders() });
+    const res = await fetch(`${API_BASE}/api/user`, { credentials: 'include', headers: getAuthHeaders(), cache: 'no-store' });
     if (res.status === 401) { window.location.href = 'index.html'; return; }
     if (!res.ok) throw new Error('Server error');
 
@@ -974,7 +974,7 @@ async function initApp() {
     try { S.user = savedUser ? JSON.parse(savedUser) : { name: 'User', email: '' }; } catch { S.user = { name: 'User', email: '' }; }
 
     try {
-      const meRes = await fetch(`${API_BASE}/api/me`, { credentials: 'include', headers: getAuthHeaders() });
+      const meRes = await fetch(`${API_BASE}/api/me`, { credentials: 'include', headers: getAuthHeaders(), cache: 'no-store' });
       if (meRes.ok) {
         const me = await meRes.json();
         S.user = { name: me.name || S.user.name, email: me.email || S.user.email, hasGoogle: !!me.hasGoogle };
