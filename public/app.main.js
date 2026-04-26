@@ -860,7 +860,7 @@ document.addEventListener('blur', e => {
     setTimeout(() => { S.showSearchDrop = false; const tb = document.getElementById('topbar'); if (tb) tb.innerHTML = buildTopbarHTML(); const si = document.getElementById('search-input'); if (si) si.value = S.query; }, 150);
   }
   // commit inline edit on blur
-  if (e.target.classList.contains('task-edit-input')) {
+  if (e.target.classList && e.target.classList.contains('task-edit-input')) {
     const inp = e.target;
     const originId = inp.dataset.originId;
     const prev = inp.dataset.prevTitle;
@@ -872,7 +872,7 @@ document.addEventListener('blur', e => {
 
 // inline edit keyboard
 document.addEventListener('keydown', e => {
-  if (e.target.classList.contains('task-edit-input')) {
+  if (e.target.classList && e.target.classList.contains('task-edit-input')) {
     if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
     if (e.key === 'Escape') { e.target.value = e.target.dataset.prevTitle; S.editingId = null; render(); }
     return;
