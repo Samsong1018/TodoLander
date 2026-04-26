@@ -24,7 +24,8 @@ function getAuthHeaders() {
 
 // ===== HTML escaping =====
 function esc(s) {
-  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 // ===== data conversion =====
@@ -34,19 +35,21 @@ function backendToFrontend(calData) {
   const tasks = [];
   for (const [date, dayTasks] of Object.entries(todos)) {
     for (const task of (dayTasks || [])) {
-      tasks.push({ id: task.id, title: task.text || task.title || '', date, color: task.color || null, done: !!task.done, notes: task.notes || '', repeat: 'none' });
+      const id = task.id != null ? String(task.id) : '';
+      tasks.push({ id, title: typeof task.text === 'string' ? task.text : (typeof task.title === 'string' ? task.title : ''), date, color: task.color || null, done: !!task.done, notes: typeof task.notes === 'string' ? task.notes : '', repeat: 'none' });
     }
   }
   for (const task of recurring) {
+    const id = task.id != null ? String(task.id) : '';
     const startDate = task.startDate || task.start_date;
     const doneDates = [], dismissedDates = [];
     for (const [date, dateState] of Object.entries(recurringState)) {
-      if (dateState && dateState[task.id]) {
-        if (dateState[task.id].done) doneDates.push(date);
-        if (dateState[task.id].dismissed) dismissedDates.push(date);
+      if (dateState && dateState[id]) {
+        if (dateState[id].done) doneDates.push(date);
+        if (dateState[id].dismissed) dismissedDates.push(date);
       }
     }
-    tasks.push({ id: task.id, title: task.text || task.title || '', date: startDate, color: task.color || null, done: doneDates.includes(startDate), notes: task.notes || '', repeat: task.frequency || 'daily', doneDates, dismissedDates });
+    tasks.push({ id, title: typeof task.text === 'string' ? task.text : (typeof task.title === 'string' ? task.title : ''), date: startDate, color: task.color || null, done: doneDates.includes(startDate), notes: typeof task.notes === 'string' ? task.notes : '', repeat: task.frequency || 'daily', doneDates, dismissedDates });
   }
   return tasks;
 }
