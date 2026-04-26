@@ -997,8 +997,15 @@ async function initApp() {
       history.replaceState(null, '', window.location.pathname);
       setTimeout(() => showToast('That Google account is already linked to another user.'), 300);
     }
-  } catch {
-    window.location.href = 'index.html';
+  } catch (err) {
+    const root = document.getElementById('root');
+    if (root) root.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px;font-family:var(--sans,sans-serif);color:var(--ink,#1a1a1a)">
+        <div style="font-size:15px;font-weight:500">Couldn't load your data</div>
+        <div style="font-size:13px;color:var(--ink-3,#888);max-width:300px;text-align:center">${err && err.message === 'Server error' ? 'Server error — please try again in a moment.' : 'Check your connection and try again.'}</div>
+        <button onclick="location.reload()" style="padding:8px 20px;border-radius:6px;border:1px solid var(--rule,#e0e0e0);background:var(--paper,#fff);cursor:pointer;font-size:14px">Retry</button>
+        <a href="index.html" style="font-size:12px;color:var(--ink-3,#888)">Sign out</a>
+      </div>`;
   }
 }
 
