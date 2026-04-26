@@ -8,11 +8,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="app.css">
 <script src="theme-init.js"></script>
-<script src="tweaks.js"></script>
 </head>
 <body>
   <div id="root"></div>
@@ -23,13 +22,8 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<script src="js/react.production.min.js"></script>
-<script src="js/react-dom.production.min.js"></script>
-<script src="js/babel.min.js"></script>
-
-<script type="text/babel" data-presets="react" src="app.icons.jsx"></script>
-<script type="text/babel" data-presets="react" src="app.logo.jsx"></script>
-<script type="text/babel" data-presets="react" src="app.modals.jsx"></script>
-<script type="text/babel" data-presets="react" src="app.main.jsx"></script>
+<script src="app.utils.js"></script>
+<script src="app.modals.js"></script>
+<script src="app.main.js"></script>
 </body>
 </html>
