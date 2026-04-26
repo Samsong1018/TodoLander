@@ -934,7 +934,7 @@
 
   /* Sidebar: full-height slide-in overlay */
   .sidebar-close { display: flex; }
-  .sidebar-backdrop { display: block; }
+  .sidebar.mobile-open + .sidebar-backdrop { display: block; }
   .sidebar {
     position: fixed;
     top: 58px; left: 0; bottom: 0;

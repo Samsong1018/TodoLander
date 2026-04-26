@@ -935,8 +935,8 @@ async function initApp() {
   skeleton.innerHTML = `
     <header class="topbar" id="topbar"></header>
     <div class="body">
-      <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
       <aside class="sidebar" id="sidebar"></aside>
+      <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
       <main class="main" id="main"></main>
     </div>`;
 
@@ -945,6 +945,16 @@ async function initApp() {
     S.sidebarOpen = false;
     const sb = document.getElementById('sidebar'); if (sb) sb.classList.remove('mobile-open');
   });
+
+  // OAuth redirect lands here with token in URL — store it so getAuthHeaders() works on mobile
+  // where cross-site cookies are blocked (same pattern as email/password login).
+  const _initParams = new URLSearchParams(window.location.search);
+  const _oauthToken = _initParams.get('oauth_token');
+  if (_oauthToken) {
+    const _existing = (() => { try { return JSON.parse(localStorage.getItem('todolander-user') || 'null'); } catch { return null; } })();
+    localStorage.setItem('todolander-user', JSON.stringify({ ...(_existing || {}), token: _oauthToken }));
+    history.replaceState(null, '', window.location.pathname);
+  }
 
   try {
     const res = await fetch(`${API_BASE}/api/user`, { credentials: 'include', headers: getAuthHeaders(), cache: 'no-store' });

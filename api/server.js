@@ -660,7 +660,7 @@ app.get('/auth/google/callback', async (req, res) => {
     await sql`INSERT INTO sessions (user_id, token, expires_at) VALUES (${user.id}, ${token}, ${expires_at})`;
 
     res.cookie('session', token, COOKIE_OPTS);
-    res.redirect(`${frontendUrl}/app.html`);
+    res.redirect(`${frontendUrl}/app.html?oauth_token=${token}`);
   } catch (err) {
     console.error('OAuth error:', err);
     res.redirect(`${frontendUrl}/?error=oauth_error`);

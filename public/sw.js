@@ -1,6 +1,6 @@
 // TodoLander Service Worker — push notifications + offline shell cache
 
-const CACHE = "todolander-v2";
+const CACHE = "todolander-v3";
 const SHELL = [
   "/", "/app.html", "/index.html",
   "/styles.css", "/app.css",
