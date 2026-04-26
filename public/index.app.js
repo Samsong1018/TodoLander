@@ -299,7 +299,7 @@ document.addEventListener('submit', function(e) {
     if (u && u.token) headers = { Authorization: 'Bearer ' + u.token };
   } catch {}
   try {
-    const res = await fetch(`${API_BASE}/api/user`, { credentials: 'include', headers });
+    const res = await fetch(`${API_BASE}/api/user`, { credentials: 'include', headers, cache: 'no-store' });
     if (res.ok) { window.location.href = 'app.html'; return; }
   } catch {}
   render();

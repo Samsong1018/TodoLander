@@ -57,7 +57,11 @@ app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 
 app.use('/api/', (req, res, next) => {
-  res.set('Cache-Control', 'no-store');
+  // no-cache is required alongside no-store: Express's `fresh` module only skips 304
+  // responses when it sees `no-cache` in Cache-Control. `no-store` alone is ignored by
+  // the freshness check, so without `no-cache` the server can return 304 for unchanged
+  // API payloads even when the client sends `cache: 'no-store'` in its fetch call.
+  res.set('Cache-Control', 'no-cache, no-store');
   next();
 });
 
