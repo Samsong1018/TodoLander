@@ -990,7 +990,7 @@ async function initApp() {
       const meRes = await fetch(`${API_BASE}/api/me`, { credentials: 'include', headers: getAuthHeaders(), cache: 'no-store' });
       if (meRes.ok) {
         const me = await meRes.json();
-        S.user = { name: me.name || S.user.name, email: me.email || S.user.email, hasGoogle: !!me.hasGoogle };
+        S.user = { ...S.user, name: me.name || S.user.name, email: me.email || S.user.email, hasGoogle: !!me.hasGoogle };
         localStorage.setItem('todolander-user', JSON.stringify(S.user));
       }
     } catch {}
