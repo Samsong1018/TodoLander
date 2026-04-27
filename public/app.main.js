@@ -221,7 +221,7 @@ async function doSave() {
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify(frontendToBackend(S.tasks)),
     });
-    if (res.status === 401) { window.location.href = 'index.html'; return; }
+    if (res.status === 401) { localStorage.removeItem('todolander-user'); localStorage.removeItem('todolander_user'); window.location.href = 'index.html'; return; }
     if (!res.ok) showToast('Save failed — changes may not be synced.');
   } catch {
     showToast('No connection — changes saved locally.');
@@ -958,7 +958,7 @@ async function initApp() {
 
   try {
     const res = await fetch(`${API_BASE}/api/user`, { credentials: 'include', headers: getAuthHeaders(), cache: 'no-store' });
-    if (res.status === 401) { window.location.href = 'index.html'; return; }
+    if (res.status === 401) { localStorage.removeItem('todolander-user'); localStorage.removeItem('todolander_user'); window.location.href = 'index.html'; return; }
     if (!res.ok) throw new Error('Server error');
 
     const calData = await res.json();
