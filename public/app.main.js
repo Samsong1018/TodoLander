@@ -153,6 +153,70 @@ const S = {
 let isLoaded = false, saveTimer = null, toastTimer = null, draggingId = null;
 let _toastEl = null;
 
+// ===== focus timer =====
+const timer = { seconds: 25 * 60, running: false, done: false, _id: null };
+
+function timerFmt() {
+  const s = timer.seconds;
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function buildTimerHTML() {
+  if (!timer.running && !timer.done && timer.seconds === 25 * 60) {
+    return `<button class="timer-btn" data-action="toggle-timer" title="Start 25-min focus timer">${iconSVG('timer', 14)}</button>`;
+  }
+  const cls = timer.done ? 'done' : timer.running ? 'running' : 'paused';
+  const label = timer.done ? 'Done!' : timerFmt();
+  const toggleTitle = timer.running ? 'Pause timer' : 'Resume timer';
+  return `<div class="timer-pill ${cls}">
+    <button class="timer-btn-time" data-action="${timer.done ? '' : 'toggle-timer'}" title="${timer.done ? '' : toggleTitle}">${label}</button>
+    <button class="timer-btn-reset" data-action="reset-timer" title="Reset">×</button>
+  </div>`;
+}
+
+function updateTimerDisplay() {
+  const wrap = document.getElementById('timer-wrap');
+  if (wrap) wrap.innerHTML = buildTimerHTML();
+}
+
+function timerTick() {
+  timer.seconds--;
+  if (timer.seconds <= 0) {
+    timer.seconds = 0;
+    timer.running = false;
+    timer.done = true;
+    clearInterval(timer._id);
+    timer._id = null;
+    showToast('Focus session complete!');
+  }
+  updateTimerDisplay();
+}
+
+function toggleTimer() {
+  if (timer.done) return;
+  if (timer.running) {
+    timer.running = false;
+    clearInterval(timer._id);
+    timer._id = null;
+  } else {
+    timer.running = true;
+    timer._id = setInterval(timerTick, 1000);
+  }
+  updateTimerDisplay();
+}
+
+function resetTimer() {
+  clearInterval(timer._id);
+  timer._id = null;
+  timer.running = false;
+  timer.done = false;
+  timer.seconds = 25 * 60;
+  updateTimerDisplay();
+}
+
+// ===== completion animation tracking =====
+const recentlyCompleted = new Set();
+
 // ===== toast =====
 function showToast(msg) {
   clearTimeout(toastTimer);
@@ -245,11 +309,12 @@ function addTask() {
 }
 
 function toggleDone(originId, isOcc, occDate) {
+  let willComplete = false;
   if (isOcc) {
     S.tasks = S.tasks.map(x => {
       if (x.id !== originId) return x;
       const dd = new Set(x.doneDates || []);
-      dd.has(occDate) ? dd.delete(occDate) : dd.add(occDate);
+      if (dd.has(occDate)) { dd.delete(occDate); } else { dd.add(occDate); willComplete = true; }
       return { ...x, doneDates: Array.from(dd) };
     });
   } else {
@@ -258,11 +323,13 @@ function toggleDone(originId, isOcc, occDate) {
       if (x.repeat && x.repeat !== 'none') {
         const dd = new Set(x.doneDates || []);
         if (x.done || dd.has(x.date)) { dd.delete(x.date); return { ...x, done: false, doneDates: Array.from(dd) }; }
-        dd.add(x.date); return { ...x, done: true, doneDates: Array.from(dd) };
+        dd.add(x.date); willComplete = true; return { ...x, done: true, doneDates: Array.from(dd) };
       }
+      willComplete = !x.done;
       return { ...x, done: !x.done };
     });
   }
+  if (willComplete) recentlyCompleted.add(originId);
   scheduleSave(); render();
 }
 
@@ -624,7 +691,10 @@ function buildMainHTML() {
     <div class="day-panel">
       <div class="day-panel-head">
         <div class="ttl">${esc(prettyDate(selected))}<span class="sub">${ordinal(selected.getDate())} of ${MONTHS[selected.getMonth()]}</span></div>
-        <span class="label-caps">${selectedExpTasks.length} task${selectedExpTasks.length !== 1 ? 's' : ''}</span>
+        <div class="day-panel-right">
+          <span class="label-caps">${selectedExpTasks.length} task${selectedExpTasks.length !== 1 ? 's' : ''}</span>
+          <div id="timer-wrap">${buildTimerHTML()}</div>
+        </div>
       </div>
       ${selectedExpTasks.length === 0
         ? `<div class="empty">"An empty square, beautifully kept."</div>`
@@ -734,6 +804,18 @@ function render() {
   document.documentElement.setAttribute('data-theme', S.settings.theme === 'dark' ? 'dark' : 'light');
   localStorage.setItem('todolander-settings', JSON.stringify(S.settings));
   localStorage.setItem('todolander-view', S.viewDate.toISOString());
+
+  // trigger completion animations for newly checked tasks
+  if (recentlyCompleted.size > 0) {
+    recentlyCompleted.forEach(id => {
+      const cb = document.querySelector(`.checkbox.checked[data-origin-id="${CSS.escape(id)}"]`);
+      if (!cb) return;
+      cb.classList.add('pop-check');
+      const item = cb.closest('.task-item');
+      if (item) item.classList.add('task-complete-anim');
+    });
+    recentlyCompleted.clear();
+  }
 }
 
 // ===== event handling =====
@@ -796,6 +878,9 @@ document.addEventListener('click', e => {
     case 'set-new-color': S.newColor = el.dataset.color || null; render(); return;
     case 'set-new-repeat': S.newRepeat = el.dataset.repeat; render(); return;
     case 'add-task': addTask(); return;
+
+    case 'toggle-timer': toggleTimer(); return;
+    case 'reset-timer': resetTimer(); return;
 
     case 'toggle-done': toggleDone(el.dataset.originId, el.dataset.isOcc === '1', el.dataset.occDate); return;
     case 'delete-task': deleteTask(el.dataset.originId); return;

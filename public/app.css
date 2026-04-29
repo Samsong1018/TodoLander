@@ -505,7 +505,7 @@
   padding: 20px 24px;
 }
 .day-panel-head {
-  display: flex; justify-content: space-between; align-items: baseline;
+  display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 14px;
 }
 .day-panel-head .ttl {
@@ -576,6 +576,77 @@
 .task-meta .dot-mini {
   width: 6px; height: 6px; border-radius: 50%;
 }
+
+/* Day panel right cluster (task count + timer) */
+.day-panel-right { display: flex; align-items: center; gap: 10px; }
+
+/* Focus timer */
+.timer-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px;
+  border: 1px solid var(--rule-2); border-radius: 6px;
+  background: transparent; color: var(--ink-3);
+  cursor: pointer; transition: all 0.12s;
+}
+.timer-btn:hover { background: var(--paper-3); color: var(--ink); border-color: var(--ink-2); }
+
+.timer-pill {
+  display: inline-flex; align-items: stretch;
+  border: 1px solid var(--rule-2); border-radius: 6px; overflow: hidden;
+  font-size: 11px; font-family: var(--mono); letter-spacing: 0.04em;
+}
+.timer-pill.running { border-color: var(--accent); }
+.timer-pill.paused  { border-color: var(--ink-3); }
+.timer-pill.done    { border-color: var(--tag-green); }
+
+.timer-btn-time {
+  padding: 4px 8px;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--ink); font-family: inherit; font-size: inherit; letter-spacing: inherit;
+  transition: background 0.12s; display: flex; align-items: center; gap: 5px;
+}
+.timer-btn-time:hover { background: var(--paper-3); }
+.timer-pill.running .timer-btn-time { color: var(--accent); }
+.timer-pill.done .timer-btn-time    { color: var(--tag-green); cursor: default; }
+.timer-pill.done .timer-btn-time:hover { background: transparent; }
+
+.timer-btn-reset {
+  padding: 4px 6px;
+  background: transparent; border: none; border-left: 1px solid var(--rule-2);
+  cursor: pointer; color: var(--ink-3); font-size: 13px; line-height: 1;
+  transition: background 0.12s, color 0.12s;
+}
+.timer-btn-reset:hover { background: var(--paper-3); color: var(--ink); }
+
+.timer-pill.running .timer-btn-time::before {
+  content: '';
+  display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent);
+  animation: timer-pulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes timer-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.65); }
+}
+
+/* Checkbox completion pop */
+@keyframes pop-check {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.45); }
+  65%  { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+.checkbox.pop-check { animation: pop-check 0.38s cubic-bezier(.2,.8,.2,1); }
+
+/* Task row slide on completion */
+@keyframes task-complete {
+  0%   { transform: translateX(0); }
+  25%  { transform: translateX(4px); }
+  100% { transform: translateX(0); }
+}
+.task-item.task-complete-anim { animation: task-complete 0.32s ease; }
 
 .task-actions { display: flex; gap: 2px; align-items: center; flex-shrink: 0; position: relative; }
 .icon-btn {
