@@ -47,7 +47,12 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // ── CORS ──────────────────────────────────────────────────
 const corsOptions = {
-  origin: ['https://todolander.com', 'https://www.todolander.com', 'https://dailytodo-q6k0.onrender.com'],
+  origin: [
+    'https://todolander.com',
+    'https://www.todolander.com',
+    // Add your own Render.com preview URL (or other origin) via env var:
+    ...(process.env.EXTRA_CORS_ORIGIN ? [process.env.EXTRA_CORS_ORIGIN] : []),
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
