@@ -64,7 +64,7 @@ const corsOptions = {
     ...(process.env.EXTRA_CORS_ORIGIN ? [process.env.EXTRA_CORS_ORIGIN] : []),
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
   credentials: true,
 };
 
@@ -104,6 +104,18 @@ app.use('/api/login', authLimiter);
 app.use('/api/signup', authLimiter);
 app.use('/api/', generalLimiter);
 
+// ── CSRF ──────────────────────────────────────────────────
+const CSRF_SECRET = process.env.CSRF_SECRET || (() => {
+  const s = crypto.randomBytes(32).toString('hex');
+  console.warn('[csrf] CSRF_SECRET env var not set — using ephemeral secret (tokens reset on restart)');
+  return s;
+})();
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+function csrfTokenFor(sessionToken) {
+  return crypto.createHmac('sha256', CSRF_SECRET).update(sessionToken).digest('hex');
+}
+
 // ── Auth middleware ───────────────────────────────────────
 // Fix #1: expiry check moved into SQL, token refreshed on each request (fix #9)
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -139,6 +151,17 @@ const authenticateToken = async (req, res, next) => {
     res.cookie('session', token, COOKIE_OPTS);
 
     req.user = rows[0];
+    req._sessionToken = token;
+
+    // CSRF check for every state-changing request
+    if (!SAFE_METHODS.has(req.method)) {
+      const provided = req.headers['x-csrf-token'];
+      const expected = csrfTokenFor(token);
+      let valid = false;
+      try { valid = provided && crypto.timingSafeEqual(Buffer.from(provided, 'hex'), Buffer.from(expected, 'hex')); } catch {}
+      if (!valid) return res.status(403).json({ error: 'CSRF token invalid or missing.' });
+    }
+
     next();
 
   } catch (err) {
@@ -180,6 +203,13 @@ function validateTaskItem(task) {
   if (task.notes !== undefined && task.notes !== null && (typeof task.notes !== 'string' || task.notes.length > 5000)) return 'Task notes must be a string of 5000 characters or fewer.';
   return null;
 }
+
+// ── CSRF token endpoint ───────────────────────────────────
+app.get('/api/csrf', (req, res) => {
+  authenticateToken(req, res, () => {
+    res.json({ token: csrfTokenFor(req._sessionToken) });
+  });
+});
 
 // ── Get user data ─────────────────────────────────────────
 app.get('/api/user', (req, res) => {

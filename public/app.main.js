@@ -15,11 +15,22 @@ function prettyDate(d) { return `${WEEKDAYS_SUN[d.getDay()]}, ${MONTHS[d.getMont
 function ordinal(n) { const s = ['th','st','nd','rd'], v = n % 100; return n + (s[(v-20)%10] || s[v] || s[0]); }
 
 // ===== auth helpers =====
+let _csrfToken = null;
+
 function getAuthHeaders() {
   try {
     const u = JSON.parse(localStorage.getItem('todolander-user') || localStorage.getItem('todolander_user') || 'null');
-    return u && u.token ? { Authorization: 'Bearer ' + u.token } : {};
+    const h = u && u.token ? { Authorization: 'Bearer ' + u.token } : {};
+    if (_csrfToken) h['X-CSRF-Token'] = _csrfToken;
+    return h;
   } catch { return {}; }
+}
+
+async function fetchCsrfToken() {
+  try {
+    const res = await fetch(`${API_BASE}/api/csrf`, { credentials: 'include', headers: getAuthHeaders() });
+    if (res.ok) { const d = await res.json(); _csrfToken = d.token; }
+  } catch {}
 }
 
 // ===== HTML escaping =====
@@ -1040,6 +1051,8 @@ async function initApp() {
     localStorage.setItem('todolander-user', JSON.stringify({ ...(_existing || {}), token: _oauthToken }));
     history.replaceState(null, '', window.location.pathname);
   }
+
+  await fetchCsrfToken();
 
   try {
     const res = await fetch(`${API_BASE}/api/user`, { credentials: 'include', headers: getAuthHeaders(), cache: 'no-store' });
