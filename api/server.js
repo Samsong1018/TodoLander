@@ -34,6 +34,16 @@ app.set('trust proxy', 1);
 // The hash covers exactly:
 //   (function(){try{var s=JSON.parse(localStorage.getItem('todolander_settings')||'{}');
 //   document.documentElement.setAttribute('data-theme',s.theme||'dark');}catch(e){}})();
+// Redirect HTTP → HTTPS in production (Render terminates TLS but passes x-forwarded-proto)
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(301, `https://${req.hostname}${req.url}`);
+    }
+    next();
+  });
+}
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -82,8 +92,17 @@ const authLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' },
 });
 
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
 app.use('/api/login', authLimiter);
 app.use('/api/signup', authLimiter);
+app.use('/api/', generalLimiter);
 
 // ── Auth middleware ───────────────────────────────────────
 // Fix #1: expiry check moved into SQL, token refreshed on each request (fix #9)
@@ -130,6 +149,7 @@ const authenticateToken = async (req, res, next) => {
 
 // ── Input validation helper (fix #5) ─────────────────────
 const FIELD_MAX_LENGTHS = { email: 255, password: 128, name: 100 };
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validateFields(fields) {
   for (const [name, value] of Object.entries(fields)) {
@@ -140,7 +160,24 @@ function validateFields(fields) {
     if (max && value.length > max) {
       return `${name} must be ${max} characters or fewer.`;
     }
+    if (name === 'email' && !EMAIL_RE.test(value)) {
+      return 'Please enter a valid email address.';
+    }
   }
+  return null;
+}
+
+// ── Task field validation ──────────────────────────────────
+const VALID_TASK_COLORS = new Set(['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#6c63ff','#ec4899', null]);
+const VALID_FREQUENCIES  = new Set(['daily', 'weekly', 'monthly']);
+const TASK_ID_RE         = /^\d+$/;
+
+function validateTaskItem(task) {
+  if (task.id !== undefined && !TASK_ID_RE.test(String(task.id))) return 'Invalid task id.';
+  if (task.color !== undefined && !VALID_TASK_COLORS.has(task.color ?? null)) return 'Invalid task color.';
+  if (task.frequency !== undefined && !VALID_FREQUENCIES.has(task.frequency)) return 'Invalid task frequency.';
+  if (task.text !== undefined && (typeof task.text !== 'string' || task.text.length > 1000)) return 'Task text must be a string of 1000 characters or fewer.';
+  if (task.notes !== undefined && task.notes !== null && (typeof task.notes !== 'string' || task.notes.length > 5000)) return 'Task notes must be a string of 5000 characters or fewer.';
   return null;
 }
 
@@ -165,6 +202,19 @@ app.put('/api/user', (req, res) => {
     }
     if (!recurringState || typeof recurringState !== 'object' || Array.isArray(recurringState)) {
       return res.status(400).json({ error: 'Invalid data: recurringState must be an object.' });
+    }
+
+    // Validate each task item to prevent XSS via stored field values
+    for (const [dateStr, items] of Object.entries(todos)) {
+      if (!Array.isArray(items)) return res.status(400).json({ error: `Invalid todos for date ${dateStr}.` });
+      for (const task of items) {
+        const err = validateTaskItem(task);
+        if (err) return res.status(400).json({ error: err });
+      }
+    }
+    for (const task of recurring) {
+      const err = validateTaskItem(task);
+      if (err) return res.status(400).json({ error: err });
     }
 
     try {
@@ -209,7 +259,7 @@ app.post('/api/signup', async (req, res) => {
     const existing = await sql`SELECT id FROM users WHERE email = ${email.trim()}`;
     if (existing.length > 0) return res.status(409).json({ error: 'Email already in use.' });
 
-    const hash = await bcrypt.hash(password, 10);
+    const hash = await bcrypt.hash(password, 12);
 
     const [user] = await sql`
       INSERT INTO users (email, password, full_name)
@@ -556,9 +606,9 @@ setInterval(purgeExpiredSessions, 60 * 60 * 1000); // every hour
 
 // Keep the server alive
 
+const SELF_PING_URL = process.env.SELF_PING_URL || 'https://dailytodo-api.onrender.com/health';
 setInterval(() => {
-  fetch('https://dailytodo-api.onrender.com/health')
-    .catch(() => {}); // silently ignore errors
+  fetch(SELF_PING_URL).catch(() => {});
 }, 14 * 60 * 1000);
 
 // ── /api/me ───────────────────────────────────────────────
