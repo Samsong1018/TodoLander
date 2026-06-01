@@ -164,6 +164,7 @@ function render() {
               Continue with Google
             </button>
           </div>
+          ${S.mode === 'signup' ? `<p class="terms">By creating an account you agree to our <a href="tos.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>` : ''}
         </div>
       </section>
     </div>`;

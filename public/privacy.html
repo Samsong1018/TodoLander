@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — TodoLander</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+<script src="theme-init.js"></script>
+<style>
+  body { min-height: 100vh; }
+
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 64px 32px 96px;
+  }
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    text-decoration: none;
+    margin-bottom: 48px;
+  }
+  .back:hover { color: var(--ink); }
+  .back svg { flex-shrink: 0; }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--serif);
+    font-size: 20px;
+    margin-bottom: 40px;
+  }
+  .brand-dot {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent);
+    border: 1px solid var(--accent);
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(36px, 5vw, 56px);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin: 0 0 12px;
+  }
+
+  .meta {
+    font-size: 12px;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 48px;
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--rule);
+    margin: 40px 0;
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 22px;
+    letter-spacing: -0.01em;
+    margin: 0 0 12px;
+  }
+
+  p {
+    color: var(--ink-2);
+    line-height: 1.65;
+    margin: 0 0 16px;
+    font-size: 15px;
+  }
+
+  ul {
+    padding-left: 20px;
+    margin: 0 0 16px;
+    color: var(--ink-2);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  li { margin-bottom: 6px; }
+
+  a { color: var(--ink); }
+  a:hover { color: var(--accent); }
+
+  .callout {
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <a class="back" href="index.html">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <path d="M9 2L4 7L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Back to TodoLander
+  </a>
+
+  <div class="brand">
+    <div class="brand-dot"></div>
+    TodoLander
+  </div>
+
+  <h1>Privacy Policy</h1>
+  <p class="meta">Effective date: June 2026 &nbsp;·&nbsp; Contact: <a href="mailto:amoshorne@gmail.com">amoshorne@gmail.com</a></p>
+
+  <div class="callout">
+    Short version: TodoLander stores your tasks and account info to make the app work. We don't sell your data, run ads, or use analytics trackers. You can export your data anytime from the app.
+  </div>
+
+  <hr>
+
+  <h2>What we collect and why</h2>
+
+  <p><strong>Account information</strong><br>
+  When you create an account we collect your name, email address, and a bcrypt-hashed password (your actual password is never stored). If you sign in with Google we receive your Google account ID, email, and display name from Google's OAuth service.</p>
+
+  <p><strong>Task and calendar data</strong><br>
+  All the todos, recurring tasks, completion states, color tags, and notes you create are stored in our database so they sync across your devices. This content belongs to you — we don't read it for any purpose other than serving it back to you.</p>
+
+  <p><strong>Push notification data</strong><br>
+  If you enable push notifications, we store your browser's push subscription endpoint and encryption keys, your local timezone (to fire notifications at the right time), and your notification preferences (which types are enabled, what time). This is stored only as long as your subscription is active.</p>
+
+  <p><strong>Session data</strong><br>
+  When you sign in we create a session token (a random UUID) stored in our database and in an httpOnly browser cookie. Sessions expire after 24 hours of inactivity and expired sessions are purged automatically.</p>
+
+  <p><strong>Server logs</strong><br>
+  Our hosting provider (Render.com) generates standard server logs that may include IP addresses and request metadata. We don't process these for user profiling.</p>
+
+  <hr>
+
+  <h2>What we don't collect</h2>
+  <ul>
+    <li>No analytics or usage tracking</li>
+    <li>No advertising identifiers</li>
+    <li>No third-party tracking pixels or scripts</li>
+    <li>No payment information (the app is free)</li>
+  </ul>
+
+  <hr>
+
+  <h2>Third-party services</h2>
+
+  <p>TodoLander uses a small number of third-party services to function:</p>
+
+  <ul>
+    <li><strong>Render.com</strong> — hosts the server and serves static files. Your data transits and is processed on Render's infrastructure.</li>
+    <li><strong>Neon</strong> — PostgreSQL database hosting. All account and task data is stored in a Neon database.</li>
+    <li><strong>Google</strong> — optional sign-in via Google OAuth. If you use "Continue with Google," Google processes your sign-in and shares your account ID, email, and name with us. Google's privacy policy governs their handling. Additionally, fonts (Instrument Serif, Inter, JetBrains Mono) are loaded from Google Fonts (fonts.googleapis.com), which may log your IP address on each page load.</li>
+  </ul>
+
+  <p>We don't share your data with any other third parties.</p>
+
+  <hr>
+
+  <h2>Data retention</h2>
+
+  <p>Your account and task data are retained as long as your account exists. Sessions expire after 24 hours and are purged hourly. Push subscriptions are removed automatically if your browser reports them as invalid (e.g. after unsubscribing from notifications in your browser settings).</p>
+
+  <hr>
+
+  <h2>Your rights</h2>
+
+  <p><strong>Export</strong> — You can download all your task data at any time using the Export button in the app (JSON and iCal formats supported).</p>
+
+  <p><strong>Deletion</strong> — To delete your account and all associated data, email <a href="mailto:amoshorne@gmail.com">amoshorne@gmail.com</a> with the subject "Delete my account." We'll process the request within 7 days.</p>
+
+  <p><strong>Correction</strong> — To correct your name or email, email us at the address above.</p>
+
+  <p>If you're in the EU or UK and have a concern we haven't resolved, you have the right to lodge a complaint with your local supervisory authority.</p>
+
+  <hr>
+
+  <h2>Security</h2>
+
+  <p>Passwords are hashed with bcrypt (12 rounds). Sessions use httpOnly, Secure cookies. All traffic is HTTPS. API endpoints require authentication and are rate-limited. We use CSRF protection on all state-changing requests.</p>
+
+  <hr>
+
+  <h2>Children</h2>
+
+  <p>TodoLander is not directed at children under 13. We don't knowingly collect personal information from anyone under 13. If you believe a child under 13 has created an account, please contact us and we'll delete it promptly.</p>
+
+  <hr>
+
+  <h2>Changes to this policy</h2>
+
+  <p>If we make material changes we'll update the effective date at the top of this page. Continued use of the app after changes constitutes acceptance of the updated policy.</p>
+
+  <hr>
+
+  <h2>Contact</h2>
+
+  <p>Questions or requests: <a href="mailto:amoshorne@gmail.com">amoshorne@gmail.com</a><br>
+  Governing law: Washington State, United States.</p>
+
+</div>
+</body>
+</html>
