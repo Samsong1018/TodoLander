@@ -29,11 +29,16 @@ const PORT = process.env.PORT || 3000;
 // Without this, rate limiting would treat all clients as the same IP.
 app.set('trust proxy', 1);
 
-// CSP: allow the tiny inline theme-detection snippet in <head> via its SHA-256 hash.
+// CSP: allow the inline service-worker-registration snippet in app.html via its SHA-256 hash.
 // All other scripts must be loaded from 'self' (no unsafe-inline).
-// The hash covers exactly:
-//   (function(){try{var s=JSON.parse(localStorage.getItem('todolander_settings')||'{}');
-//   document.documentElement.setAttribute('data-theme',s.theme||'dark');}catch(e){}})();
+// The hash covers the exact raw text node between <script> and </script> in public/app.html
+// (including the leading/trailing newline that surrounds it in the source):
+//   \nif ('serviceWorker' in navigator) {\n  navigator.serviceWorker.register('/sw.js').catch(() => {});\n}\n
+// NOTE: app.html is served as a static file (express.static, no templating), so a per-request
+// CSP nonce isn't wired up here — recomputing this hash is the lower-risk fix for now. If that
+// inline script ever changes, or a templating layer gets added, prefer switching to a nonce.
+// Regenerate with:
+//   node -e "const c=require('fs').readFileSync('public/app.html','utf8');const s=c.indexOf('<script>')+8;const e=c.indexOf('</script>',s);console.log('sha256-'+require('crypto').createHash('sha256').update(c.slice(s,e),'utf8').digest('base64'))"
 // Redirect HTTP → HTTPS in production (Render terminates TLS but passes x-forwarded-proto)
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
@@ -48,7 +53,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      'script-src': ["'self'", "'sha256-GuTAr52SXvRJLc4/jEFuGVhMJFjNnyxU6dL+ZXDvDVU='"],
+      'script-src': ["'self'", "'sha256-IJXfrfOR0+l+rEofaMA8bmtIo8+9eXTPNBPsJO/6EIY='"],
     },
   },
 }));
@@ -191,9 +196,20 @@ function validateFields(fields) {
 }
 
 // ── Task field validation ──────────────────────────────────
-const VALID_TASK_COLORS = new Set(['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#6c63ff','#ec4899', null]);
+// Must match the frontend's TAG_COLORS ids in public/app.utils.js (color *names*, not hex codes —
+// the frontend never sends hex values).
+const VALID_TASK_COLORS = new Set(['red','orange','yellow','green','blue','purple','pink', null]);
 const VALID_FREQUENCIES  = new Set(['daily', 'weekly', 'monthly']);
-const TASK_ID_RE         = /^\d+$/;
+// Must match the id formats the frontend actually generates:
+//   - legacy plain numeric ids (old data / `\d+`)
+//   - addTask() in app.main.js: 't' + Date.now() + Math.random().toString(36).slice(2,6)
+//   - JSON-import fallback in app.modals.js: 't' + Date.now() + Math.random().toString(36).slice(2)
+//     (no upper bound on the random suffix — can be longer than addTask()'s)
+//   - JSON-import can also pass through a user-supplied `t.id` verbatim if present; occurrence ids
+//     (`t<id>__occ__<date>`, produced by expandRepeats()) are display-only and are never sent to
+//     the backend — frontendToBackend() always operates on the pre-expansion S.tasks list.
+// Kept as a conservative safe-charset + length cap rather than trying to enumerate every generator.
+const TASK_ID_RE         = /^[A-Za-z0-9_-]{1,128}$/;
 
 function validateTaskItem(task) {
   if (task.id !== undefined && !TASK_ID_RE.test(String(task.id))) return 'Invalid task id.';
@@ -728,8 +744,15 @@ app.get('/auth/google/callback', async (req, res) => {
     } else {
       const byEmail = await sql`SELECT id, full_name, email FROM users WHERE email = ${profile.email}`;
       if (byEmail.length > 0) {
-        await sql`UPDATE users SET google_id = ${profile.sub} WHERE id = ${byEmail[0].id}`;
-        user = byEmail[0];
+        // SECURITY: do NOT silently attach this Google identity to an existing account just
+        // because the email matches. Google email addresses are not proof of ownership of an
+        // existing TodoLander account, and auto-merging here would let anyone who controls (or
+        // later gains control of) a Google account with a matching email address log straight
+        // into an existing password-protected account — a pre-account-takeover vector.
+        // The safe path is the already-authenticated link flow: log in with the password, then
+        // link Google from account settings (POST /auth/google/link-init → this same callback
+        // with state.type === 'link', handled above).
+        return res.redirect(`${frontendUrl}/?error=google_email_conflict`);
       } else {
         const [newUser] = await sql`
           INSERT INTO users (email, full_name, google_id)

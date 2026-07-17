@@ -289,6 +289,8 @@ document.addEventListener('submit', function(e) {
   if (oauthError) {
     S.apiError = oauthError === 'oauth_denied'
       ? 'Sign in was cancelled.'
+      : oauthError === 'google_email_conflict'
+      ? 'An account with this email already exists. Log in with your password below, then connect Google from Settings.'
       : 'Google sign in failed. Please try again.';
     // Clean the error param from the URL without triggering a reload
     history.replaceState(null, '', window.location.pathname);
