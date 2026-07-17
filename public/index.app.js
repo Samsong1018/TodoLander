@@ -1,5 +1,5 @@
 // TodoLander — auth page (sign in / create account)
-const API_BASE = 'https://dailytodo-api.onrender.com';
+const API_BASE = '';
 
 const S = {
   mode: 'signup',

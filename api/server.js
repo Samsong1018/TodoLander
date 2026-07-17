@@ -65,6 +65,7 @@ const corsOptions = {
   origin: [
     'https://todolander.com',
     'https://www.todolander.com',
+    'https://todolander.somab.dev',
     // Add your own Render.com preview URL (or other origin) via env var:
     ...(process.env.EXTRA_CORS_ORIGIN ? [process.env.EXTRA_CORS_ORIGIN] : []),
   ],
